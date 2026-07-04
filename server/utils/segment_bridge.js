@@ -49,17 +49,9 @@ async function segmentImage(imageUrl) {
   let tmpPath = null;
 
   try {
-    // 1. Download image to temp
-    console.log('[SegBridge] Downloading image...');
-    tmpPath = await downloadToTemp(imageUrl);
-    console.log(`[SegBridge] Downloaded to: ${tmpPath}`);
-
-    // 2. Send HTTP request to Python FastAPI microservice
     console.log(`[SegBridge] Sending request to Python API (${PYTHON_API_URL}/segment)...`);
-    
-    // We expect the Python server to already have the model loaded in RAM
     const response = await axios.post(`${PYTHON_API_URL}/segment`, {
-      image_path: tmpPath
+      image_path: imageUrl
     }, {
       timeout: 30000 // Fast timeout, inference should take < 1s
     });
@@ -70,41 +62,40 @@ async function segmentImage(imageUrl) {
 
   } catch (err) {
     if (err.response) {
-      // The Python server responded with a status code that falls out of the range of 2xx
       throw new Error(`Python API Error: ${err.response.data?.detail || err.message}`);
     } else if (err.code === 'ECONNREFUSED') {
       throw new Error('Python segmentation API is not running. Did you start it with uvicorn?');
     }
     throw err;
-  } finally {
-    // 3. Cleanup temp file
-    if (tmpPath) {
-      fs.unlink(tmpPath, (err) => {
-        if (err) console.warn(`[SegBridge] Could not delete temp file: ${tmpPath}`);
-      });
-    }
   }
 }
 
 /**
- * Call local Python FastAPI for SD Generation
- * @param {string} imagePath - Local path to the temp image
+ * Call Python FastAPI for SD/Texture Mapping Generation
+ * @param {string} imageUrl - Remote URL to the base image
  * @param {string} zone - The zone to replace
  * @param {string} texturePrompt - The texture prompt
+ * @param {string} textureImageUrl - Remote URL of the product texture
  * @returns {Promise<object>} The result containing renderedUrl
  */
-async function generateImage(imagePath, zone, texturePrompt, textureImagePath = null) {
+async function generateImage(imageUrl, zone, texturePrompt, textureImageUrl = null) {
   console.log(`[SegBridge] Sending request to Python API (${PYTHON_API_URL}/generate)...`);
   try {
     const response = await axios.post(`${PYTHON_API_URL}/generate`, {
-      image_path: imagePath,
+      image_path: imageUrl,
       zone: zone,
       texture_prompt: texturePrompt,
-      texture_image_path: textureImagePath
+      texture_image_path: textureImageUrl
     }, {
-      timeout: 300000 // 5 minutes (allows for model loading on first run)
+      timeout: 300000 // 5 minutes
     });
-    return response.data;
+    
+    // Convert relative uvicorn path (/temp/render_xxx.jpg) to a fully qualified URL
+    const data = response.data;
+    if (data.renderedUrl && data.renderedUrl.startsWith('/')) {
+      data.renderedUrl = `${PYTHON_API_URL}${data.renderedUrl}`;
+    }
+    return data;
   } catch (err) {
     if (err.response) {
       throw new Error(`Python API Error: ${err.response.data?.detail || err.message}`);

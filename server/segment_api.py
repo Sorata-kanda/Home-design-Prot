@@ -9,6 +9,8 @@ import uuid
 import cv2
 import numpy as np
 import torch
+import urllib.request
+import tempfile
 from PIL import Image
 from transformers import SegformerForSemanticSegmentation, SegformerImageProcessor
 from fastapi import FastAPI, HTTPException
@@ -29,6 +31,34 @@ UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "temp")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 app = FastAPI(title="Arteffects Local AI API")
+app.mount("/temp", StaticFiles(directory=UPLOAD_DIR), name="temp")
+
+def load_image(path_or_url):
+    if path_or_url.startswith("http://") or path_or_url.startswith("https://"):
+        print(f"[Loader] Downloading remote image: {path_or_url}")
+        fd, temp_path = tempfile.mkstemp(suffix=".jpg")
+        try:
+            # Add user agent headers to prevent blocking by some websites/CDNs
+            req = urllib.request.Request(
+                path_or_url, 
+                headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
+            )
+            with urllib.request.urlopen(req) as response, open(temp_path, 'wb') as out_file:
+                out_file.write(response.read())
+            img = cv2.imread(temp_path)
+            if img is None:
+                raise ValueError("Failed to decode downloaded image")
+            return img, temp_path
+        finally:
+            os.close(fd)
+    else:
+        # Local file path
+        if not os.path.exists(path_or_url):
+            raise FileNotFoundError(f"Local file not found: {path_or_url}")
+        img = cv2.imread(path_or_url)
+        if img is None:
+            raise ValueError("Failed to read local image")
+        return img, None
 
 class SegmentRequest(BaseModel):
     image_path: str
@@ -113,12 +143,11 @@ def composite(original_bgr, inpainted_pil, mask):
 @app.post("/segment")
 def segment_endpoint(req: SegmentRequest):
     """Returns all detected zones and their coverages (used for UI)."""
-    if not os.path.exists(req.image_path):
-        raise HTTPException(status_code=400, detail=f"Image not found: {req.image_path}")
-
-    img = cv2.imread(req.image_path)
-    if img is None:
-        raise HTTPException(status_code=400, detail="Failed to decode image")
+    temp_file = None
+    try:
+        img, temp_file = load_image(req.image_path)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to load image: {str(e)}")
 
     try:
         pred, h, w = get_segmentation_map(img)
@@ -154,6 +183,12 @@ def segment_endpoint(req: SegmentRequest):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if temp_file and os.path.exists(temp_file):
+            try:
+                os.remove(temp_file)
+            except Exception as e:
+                print(f"[Loader] Error removing temp file: {e}")
 
 
 def run_texture_mapping(img_bgr, mask, texture_path):
@@ -216,30 +251,53 @@ def run_texture_mapping(img_bgr, mask, texture_path):
 @app.post("/generate")
 def generate_endpoint(req: GenerateRequest):
     """Runs the full pipeline to replace a texture in a specific zone."""
-    if not os.path.exists(req.image_path):
-        raise HTTPException(status_code=400, detail=f"Image not found: {req.image_path}")
-
+    temp_img = None
+    temp_tex = None
     try:
-        img = cv2.imread(req.image_path)
-        if img is None:
-            raise HTTPException(status_code=400, detail="Failed to decode image")
+        # Load main image (local or remote)
+        try:
+            img, temp_img = load_image(req.image_path)
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Failed to load base image: {str(e)}")
 
         start_time = time.time()
         
         # Run local pipeline
-        mask      = run_segmentation_for_mask(img, req.zone)
-        mask      = prepare_mask(mask, img.shape)
+        mask = run_segmentation_for_mask(img, req.zone)
+        mask = prepare_mask(mask, img.shape)
         
-        # Use actual product texture image (required)
-        if not req.texture_image_path or not os.path.exists(req.texture_image_path):
-            raise HTTPException(status_code=400, detail="Product texture image path is required and must exist.")
+        # Load texture image (local or remote)
+        if not req.texture_image_path:
+            raise HTTPException(status_code=400, detail="Product texture image path is required.")
+        
+        try:
+            if req.texture_image_path.startswith("http://") or req.texture_image_path.startswith("https://"):
+                print(f"[Loader] Downloading remote texture: {req.texture_image_path}")
+                fd, temp_tex = tempfile.mkstemp(suffix=".jpg")
+                try:
+                    # User agent header is important for Cloudinary images
+                    req_obj = urllib.request.Request(
+                        req.texture_image_path, 
+                        headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
+                    )
+                    with urllib.request.urlopen(req_obj) as response, open(temp_tex, 'wb') as out_file:
+                        out_file.write(response.read())
+                    texture_path = temp_tex
+                finally:
+                    os.close(fd)
+            else:
+                if not os.path.exists(req.texture_image_path):
+                    raise FileNotFoundError(f"Local texture path not found: {req.texture_image_path}")
+                texture_path = req.texture_image_path
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Failed to load texture image: {str(e)}")
             
-        print(f"[Texture Map] Mapping actual product texture from: {req.texture_image_path}")
-        inpainted = run_texture_mapping(img, mask, req.texture_image_path)
+        print(f"[Texture Map] Mapping actual product texture from: {texture_path}")
+        inpainted = run_texture_mapping(img, mask, texture_path)
             
-        result    = composite(img, inpainted, mask)
+        result = composite(img, inpainted, mask)
 
-        # Save to public uploads folder
+        # Save to public temp folder
         filename = f"render_{uuid.uuid4().hex[:8]}.jpg"
         output_path = os.path.join(UPLOAD_DIR, filename)
         
@@ -259,6 +317,14 @@ def generate_endpoint(req: GenerateRequest):
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        # Clean up all downloaded temp files
+        for f in [temp_img, temp_tex]:
+            if f and os.path.exists(f):
+                try:
+                    os.remove(f)
+                except Exception as e:
+                    print(f"[Loader] Error removing temp file: {e}")
 
 
 @app.get("/health")
