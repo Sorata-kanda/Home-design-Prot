@@ -39,6 +39,28 @@ export function AuthProvider({ children }) {
     return user;
   };
 
+  const loginWithGoogle = async (googleToken) => {
+    const res = await authAPI.googleLogin({ token: googleToken });
+    const { token, user } = res.data;
+    localStorage.setItem('ae_token', token);
+    localStorage.setItem('ae_user', JSON.stringify(user));
+    setUser(user);
+    return user;
+  };
+
+  const verifyOTP = async (email, otp) => {
+    const res = await authAPI.verifyOTP({ email, otp });
+    const { token, user } = res.data;
+    localStorage.setItem('ae_token', token);
+    localStorage.setItem('ae_user', JSON.stringify(user));
+    setUser(user);
+    return user;
+  };
+
+  const resendOTP = async (email) => {
+    await authAPI.resendOTP({ email });
+  };
+
   const logout = () => {
     localStorage.removeItem('ae_token');
     localStorage.removeItem('ae_user');
@@ -46,7 +68,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, loading, isAdmin: user?.role === 'admin' }}>
+    <AuthContext.Provider value={{ user, login, register, loginWithGoogle, verifyOTP, resendOTP, logout, loading, isAdmin: user?.role === 'admin' }}>
       {children}
     </AuthContext.Provider>
   );
