@@ -12,8 +12,8 @@ AI-powered room visualizer for the Arteffects stone & moulding website. Lets cli
 | Backend | Node.js + Express |
 | Database | MongoDB + Mongoose |
 | Image storage | Cloudinary |
-| AI generation | Stability AI (img2img) or Replicate |
-| Authentication | JWT |
+| Local AI & Mapping | FastAPI, PyTorch, SegFormer, OpenCV (LAB Color Space) |
+| Authentication | Google OAuth 2.0 & JWT with Resend Email OTP |
 
 ---
 
@@ -89,12 +89,14 @@ CLOUDINARY_CLOUD_NAME=xxx
 CLOUDINARY_API_KEY=xxx
 CLOUDINARY_API_SECRET=xxx
 
-# AI Generation — pick ONE:
-# Option A: Stability AI (https://platform.stability.ai)
-STABILITY_API_KEY=sk-xxx
+# Google OAuth Credentials
+GOOGLE_CLIENT_ID=your_google_client_id_here.apps.googleusercontent.com
 
-# Option B: Replicate (https://replicate.com)
-REPLICATE_API_TOKEN=r8_xxx
+# Resend API Key for Email OTP Verification
+RESEND_API_KEY=re_your_api_key_here
+
+# Python microservice connection URL
+PYTHON_API_URL=http://localhost:8000
 
 CLIENT_URL=http://localhost:3000
 ```
@@ -128,6 +130,16 @@ Or log in as admin on the website → Admin panel → click "Seed sample data".
 
 ### 5. Run in development
 
+First, start the Python FastAPI AI microservice:
+```bash
+cd server
+# Activate your virtual environment:
+.\venv\Scripts\Activate.ps1
+# Start the server:
+python segment_api.py
+```
+
+Then, in a new terminal, start the Node/Express backend and React frontend:
 ```bash
 # From root
 npm run dev
@@ -135,32 +147,24 @@ npm run dev
 
 - Backend: http://localhost:5000
 - Frontend: http://localhost:3000
+- Python API: http://localhost:8000
 
 ---
 
-## AI Generation Setup
+## AI & Texture Mapping Pipeline
 
-The visualizer uses **image-to-image AI** to apply stone textures to uploaded room photos.
+The visualizer uses a hybrid **SegFormer (Ade20k) + OpenCV LAB Color Space** mapping pipeline to apply product textures realistically in under 20 milliseconds:
 
-### Option A: Stability AI (Recommended)
-1. Sign up at https://platform.stability.ai
-2. Create API key
-3. Set `STABILITY_API_KEY=sk-xxx` in `.env`
-4. Uses `stable-diffusion-xl-1024-v1-0` img2img endpoint
+### 1. SegFormer Segmentation
+* Pre-loaded in the FastAPI service (`segment_api.py`).
+* Detects room components (walls, floors, ceiling, pillars) from the uploaded room image.
 
-### Option B: Replicate
-1. Sign up at https://replicate.com
-2. Create API token
-3. Set `REPLICATE_API_TOKEN=r8_xxx` in `.env`
-
-### Demo mode (no API key)
-If no AI key is configured, the tool returns the original photo. Useful for testing the UI flow without AI costs.
-
-**Prompt strategy**: The server builds a detailed prompt from selected products:
-- Material name, category, finish type
-- Zone (floor/wall/pillar/etc.)
-- Neoclassical preset descriptions
-- Realism modifiers: preserve lighting, room proportions, shadows
+### 2. OpenCV LAB Color Space Mapping
+* Takes the product's actual Cloudinary SKU texture image.
+* Converts both the original room photo (cropped to mask bounding box) and the tiled texture to the **LAB Color Space** to isolate lightness (`L`).
+* Calculates a dynamic `lighting_ratio` map from the original wall's lighting patterns.
+* Multiplies the product texture's `L` channel by this ratio, perfectly projecting original highlights, shadows, and ambient occlusion onto the new texture.
+* Blends the mapped result back onto the original photo, maintaining 100% SKU visual accuracy.
 
 ---
 
@@ -194,8 +198,11 @@ If no AI key is configured, the tool returns the original photo. Useful for test
 ```
 GET  /api/products          List products (filter: category, grade, zone)
 GET  /api/products/:id      Product detail
-POST /api/auth/register     Create account
-POST /api/auth/login        Login
+POST /api/auth/register     Create account (triggers Resend OTP)
+POST /api/auth/login        Login (requires verified account)
+POST /api/auth/google       OAuth 2.0 login / auto-registration
+POST /api/auth/verify-otp   Verify registration code
+POST /api/auth/resend-otp   Resend registration code
 GET  /api/renders/shared/:token  Public render view
 POST /api/quotes            Submit quote (no auth required)
 ```
@@ -278,14 +285,21 @@ Each quote includes: contact details, city, selected SKUs with area estimates, p
 
 ## Environment Variables Reference
 
+### Backend (`server/.env`)
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `MONGODB_URI` | Yes | MongoDB connection string |
-| `JWT_SECRET` | Yes | Random 32+ char string |
-| `CLOUDINARY_CLOUD_NAME` | Yes | Cloudinary account |
+| `MONGODB_URI` | Yes | MongoDB Atlas connection string |
+| `JWT_SECRET` | Yes | Random 32+ char token signing key |
+| `CLOUDINARY_CLOUD_NAME` | Yes | Cloudinary cloud namespace |
 | `CLOUDINARY_API_KEY` | Yes | Cloudinary API key |
-| `CLOUDINARY_API_SECRET` | Yes | Cloudinary secret |
-| `STABILITY_API_KEY` | One of | Stability AI key |
-| `REPLICATE_API_TOKEN` | One of | Replicate token |
-| `CLIENT_URL` | Yes | Frontend URL for CORS |
+| `CLOUDINARY_API_SECRET` | Yes | Cloudinary API secret |
+| `GOOGLE_CLIENT_ID` | Yes | Google Developer Console OAuth Client ID |
+| `RESEND_API_KEY` | Yes | Resend API Key for Email OTP Verification |
+| `PYTHON_API_URL` | No | Python microservice URL (default: `http://localhost:8000`) |
+| `CLIENT_URL` | Yes | React Frontend URL for CORS |
 | `PORT` | No | Server port (default 5000) |
+
+### Frontend (`client/.env`)
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `REACT_APP_GOOGLE_CLIENT_ID` | Yes | Google Developer Console OAuth Client ID |
