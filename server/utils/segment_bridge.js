@@ -53,7 +53,7 @@ async function segmentImage(imageUrl) {
     const response = await axios.post(`${PYTHON_API_URL}/segment`, {
       image_path: imageUrl
     }, {
-      timeout: 30000 // Fast timeout, inference should take < 1s
+      timeout: 60000 // 60 seconds to allow for network transfer
     });
 
     const result = response.data;

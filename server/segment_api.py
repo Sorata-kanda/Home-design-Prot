@@ -30,6 +30,13 @@ ADE20K_ZONES = {
 UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "temp")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
+# Pre-load SegFormer model and processor globally on server boot
+print(f"[Segmentation] Pre-loading SegFormer model '{SEG_MODEL}' on {DEVICE}...")
+PROCESSOR = SegformerImageProcessor.from_pretrained(SEG_MODEL, local_files_only=False)
+MODEL     = SegformerForSemanticSegmentation.from_pretrained(SEG_MODEL, local_files_only=False)
+MODEL.eval().to(DEVICE)
+print("[Segmentation] Model pre-loaded successfully!")
+
 app = FastAPI(title="Arteffects Local AI API")
 app.mount("/temp", StaticFiles(directory=UPLOAD_DIR), name="temp")
 
@@ -72,27 +79,17 @@ class GenerateRequest(BaseModel):
 
 # ── Stage 1: Segmentation ───────────────────────────────────────────
 def get_segmentation_map(img_bgr):
-    print(f"[Segmentation] Loading segmentation model on {DEVICE}...")
-    processor = SegformerImageProcessor.from_pretrained(SEG_MODEL, local_files_only=False)
-    model     = SegformerForSemanticSegmentation.from_pretrained(SEG_MODEL, local_files_only=False)
-    model.eval().to(DEVICE)
-
     h, w    = img_bgr.shape[:2]
     pil_img = Image.fromarray(cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB))
-    inputs  = processor(images=pil_img, return_tensors="pt").to(DEVICE)
+    inputs  = PROCESSOR(images=pil_img, return_tensors="pt").to(DEVICE)
 
     with torch.no_grad():
-        logits = model(**inputs).logits
+        logits = MODEL(**inputs).logits
 
     upsampled = torch.nn.functional.interpolate(
         logits, size=(h, w), mode="bilinear", align_corners=False
     )
     pred = upsampled.argmax(dim=1).squeeze(0).cpu().numpy()
-
-    # ── CRITICAL: unload before returning ─────────────────────────
-    del model, inputs, logits, upsampled
-    torch.cuda.empty_cache()
-    print("    Segmentation model unloaded from VRAM")
 
     return pred, h, w
 
