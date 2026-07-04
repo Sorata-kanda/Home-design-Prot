@@ -18,7 +18,7 @@ from pydantic import BaseModel
 from fastapi.staticfiles import StaticFiles
 
 # ── Config ─────────────────────────────────────────────────────────
-SEG_MODEL   = "nvidia/segformer-b2-finetuned-ade-512-512"
+SEG_MODEL   = "nvidia/segformer-b0-finetuned-ade-512-512"
 DEVICE      = "cuda" if torch.cuda.is_available() else "cpu"
 
 ADE20K_ZONES = {
@@ -79,17 +79,39 @@ class GenerateRequest(BaseModel):
 
 # ── Stage 1: Segmentation ───────────────────────────────────────────
 def get_segmentation_map(img_bgr):
-    h, w    = img_bgr.shape[:2]
-    pil_img = Image.fromarray(cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB))
+    h, w = img_bgr.shape[:2]
+    
+    # Downscale for segmentation if too large (saves massive PyTorch RAM)
+    max_dim = 1024
+    if h > max_dim or w > max_dim:
+        scale = max_dim / max(h, w)
+        seg_h, seg_w = int(h * scale), int(w * scale)
+        img_seg = cv2.resize(img_bgr, (seg_w, seg_h), interpolation=cv2.INTER_AREA)
+    else:
+        seg_h, seg_w = h, w
+        img_seg = img_bgr
+
+    pil_img = Image.fromarray(cv2.cvtColor(img_seg, cv2.COLOR_BGR2RGB))
     inputs  = PROCESSOR(images=pil_img, return_tensors="pt").to(DEVICE)
 
     with torch.no_grad():
         logits = MODEL(**inputs).logits
 
+    # Upsample to the downscaled shape (seg_h, seg_w) which is low-res, not the massive (h, w)
     upsampled = torch.nn.functional.interpolate(
-        logits, size=(h, w), mode="bilinear", align_corners=False
+        logits, size=(seg_h, seg_w), mode="bilinear", align_corners=False
     )
-    pred = upsampled.argmax(dim=1).squeeze(0).cpu().numpy()
+    pred_low = upsampled.argmax(dim=1).squeeze(0).cpu().numpy()
+
+    # If we downscaled, upscale the integer prediction mask back to the original size
+    if h > max_dim or w > max_dim:
+        pred = cv2.resize(
+            pred_low.astype(np.uint8), 
+            (w, h), 
+            interpolation=cv2.INTER_NEAREST
+        ).astype(int)
+    else:
+        pred = pred_low
 
     return pred, h, w
 
