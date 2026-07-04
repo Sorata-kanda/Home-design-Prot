@@ -63,7 +63,7 @@ export default function Navbar() {
             <>
               <Link to="/dashboard" className="btn btn-ghost btn-sm" style={{ display:'flex', alignItems:'center', gap:6 }}>
                 <User size={15} />
-                <span style={{ display: window.innerWidth < 640 ? 'none' : 'inline' }}>
+                <span className="hidden-mobile">
                   {user.name.split(' ')[0]}
                 </span>
               </Link>

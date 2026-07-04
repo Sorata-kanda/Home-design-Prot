@@ -262,9 +262,9 @@ export default function VisualizerPage() {
 
       {/* Step 2: Product Selection */}
       {step === 2 && (
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 360px', minHeight:'calc(100vh - 120px)', gap:0 }}>
+        <div className="visualizer-container">
           {/* Left: Photo + zone overlay */}
-          <div style={{ position:'sticky', top:64, height:'calc(100vh - 64px)', overflow:'hidden', background:'var(--charcoal)', display:'flex', flexDirection:'column' }}>
+          <div className="visualizer-left-panel">
             <div style={{ flex:1, position:'relative', overflow:'hidden' }}>
               {photo && (
                 <img ref={imgRef} src={photo} alt="Your room" style={{ width:'100%', height:'100%', objectFit:'contain' }} />
@@ -288,20 +288,15 @@ export default function VisualizerPage() {
 
               {/* Zone overlay badges (positioned on image) */}
               {showOverlay && !segmenting && detectedZones.length > 0 && (
-                <div style={{ position:'absolute', inset:0, pointerEvents:'none' }}>
+                <div className="visualizer-overlay-badges">
                   {detectedZones.map((zone) => {
                     const colors = ZONE_COLORS[zone.type] || { bg: 'rgba(128,128,128,0.25)', border: '#888', label: zone.type };
                     const hasProduct = getZoneProduct(zone.type);
                     const isActive = activeZone === zone.type;
 
-                    // Position badges in a column on the left side
-                    const zoneIndex = detectedZones.indexOf(zone);
-                    const topPos = 12 + zoneIndex * 44;
-
                     return (
                       <div key={zone.type}
                         style={{
-                          position:'absolute', left:12, top:topPos,
                           display:'flex', alignItems:'center', gap:6,
                           pointerEvents:'auto', cursor:'pointer',
                           padding:'6px 12px', borderRadius:8,
@@ -310,7 +305,8 @@ export default function VisualizerPage() {
                           backdropFilter:'blur(6px)',
                           transition:'all 0.2s',
                           transform: isActive ? 'scale(1.05)' : 'scale(1)',
-                          boxShadow: isActive ? `0 0 12px ${colors.border}` : 'none'
+                          boxShadow: isActive ? `0 0 12px ${colors.border}` : 'none',
+                          whiteSpace: 'nowrap'
                         }}
                         onClick={() => setActiveZone(zone.type)}
                       >
@@ -386,7 +382,7 @@ export default function VisualizerPage() {
           </div>
 
           {/* Right: Product selector panel */}
-          <div style={{ borderLeft:'1px solid var(--border)', background:'var(--warm-white)', overflowY:'auto', height:'calc(100vh - 120px)' }}>
+          <div className="visualizer-right-panel">
             <div style={{ padding:'1.25rem', borderBottom:'1px solid var(--border)', position:'sticky', top:0, background:'var(--warm-white)', zIndex:10 }}>
               <h3 style={{ marginBottom:4, fontSize:'1.1rem' }}>Choose materials</h3>
               <p style={{ fontSize:'0.8125rem', margin:0 }}>Select a zone on the photo, then pick a product texture</p>
@@ -545,7 +541,7 @@ export default function VisualizerPage() {
           </div>
 
           {/* Before / After */}
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'1rem', marginBottom:'1.5rem' }}>
+          <div className="grid-2" style={{ marginBottom:'1.5rem' }}>
             <div style={{ borderRadius:16, overflow:'hidden', border:'1px solid var(--border)' }}>
               <div style={{ padding:'0.5rem 1rem', background:'var(--charcoal)', color:'white', fontSize:'0.8125rem', fontWeight:500 }}>Before</div>
               <img src={photo} alt="Original room" style={{ width:'100%', display:'block' }} />
