@@ -9,11 +9,12 @@ const steps = [
 ];
 
 const products = [
-  { name: 'Italian Marble', img: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80', tag: 'From ₹450/sq.ft' },
-  { name: 'Gwalior Stone', img: 'https://images.unsplash.com/photo-1509699980850-78c7b1f7d7de?w=400&q=80', tag: 'From ₹85/sq.ft' },
-  { name: 'Moca Crema', img: 'https://images.unsplash.com/photo-1484154218962-a197022b5858?w=400&q=80', tag: 'From ₹320/sq.ft' },
-  { name: 'Ionic Columns', img: 'https://images.unsplash.com/photo-1548013146-72479768bada?w=400&q=80', tag: 'Custom quote' }
+  { name: 'Italian Marble', img: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRz9Peg_M9DBrM8hsvefw2l-lZ4z9ZOZc5W27DwGvub9BPPkLfRs6Nqzbo&s=10', tag: 'From ₹450/sq.ft' },
+  { name: 'Gwalior Stone', img: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTgP1hfI32AsJpGEoPy-il7ML8TC1z38BS1k9WNTVSCxg&s=10', tag: 'From ₹85/sq.ft' },
+  { name: 'Moca Crema', img: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ-knVFgHpPZjc3IEPt6QXhAWOBS2XTp-McTh_XUWRvnQ&s=10', tag: 'From ₹320/sq.ft' },
+  { name: 'Ionic Columns', img: 'https://media.istockphoto.com/id/1352319348/photo/architectural-detail-of-marble-ionic-order-columns.jpg?s=612x612&w=0&k=20&c=tebnyOBnSWBNv5SkKWWwhrpLNsqj1sEKHwHfM5lF22k=', tag: 'Custom quote' }
 ];
+
 
 export default function HomePage() {
   return (
