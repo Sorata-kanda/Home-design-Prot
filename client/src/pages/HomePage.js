@@ -58,8 +58,8 @@ export default function HomePage() {
             Upload a photo of your room. Our AI places premium marble, Gwalior stone, and mouldings exactly where you want them — with real lighting, texture, and finish.
           </p>
           <div style={{ display:'flex', gap:'1rem', justifyContent:'center', flexWrap:'wrap' }}>
-            <Link to="/visualizer" className="btn btn-primary btn-lg">
-              Try the visualizer <ArrowRight size={18} />
+            <Link to="/login" className="btn btn-primary btn-lg">
+              Get Started <ArrowRight size={18} />
             </Link>
             <Link to="/products" className="btn btn-secondary btn-lg">
               Browse products
