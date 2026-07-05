@@ -26,7 +26,7 @@ export default function SharedRenderPage() {
     <div style={{ textAlign:'center', padding:'5rem 1rem' }}>
       <h3 style={{ marginBottom:8 }}>Visualization not found</h3>
       <p style={{ marginBottom:'1.5rem' }}>This link may have expired or been removed.</p>
-      <Link to="/visualizer" className="btn btn-primary">Create your own</Link>
+      <Link to="/login" className="btn btn-primary">Create your own</Link>
     </div>
   );
 
@@ -90,7 +90,7 @@ export default function SharedRenderPage() {
           <button onClick={() => setShowQuote(true)} className="btn btn-primary btn-lg">
             <MessageSquare size={18} /> Request a quote
           </button>
-          <Link to="/visualizer" className="btn btn-secondary btn-lg">
+          <Link to="/login" className="btn btn-secondary btn-lg">
             <Wand2 size={18} /> Try with your room
           </Link>
         </div>
