@@ -76,7 +76,7 @@ export default function LoginPage() {
           <div style={{ width:52, height:52, background:'var(--gold)', borderRadius:14, display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 1rem' }}>
             <Layers size={24} color="white" />
           </div>
-          <h2>Sign in to Arteffects</h2>
+          <h2>Sign in to Stratum</h2>
           <p style={{ margin:'0.5rem 0 0' }}>Access your visualizations and saved renders</p>
         </div>
         <div className="card">

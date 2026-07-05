@@ -26,12 +26,36 @@ export default function HomePage() {
             <Star size={14} color="var(--gold)" fill="var(--gold)" />
             <span style={{ fontSize:'0.8125rem', color:'var(--gold-dark)', fontWeight:500 }}>AI-powered room visualizer</span>
           </div>
-          <h1 style={{ marginBottom:'1.25rem', color:'var(--charcoal)' }}>
-            See our stone in<br />
-            <span style={{ color:'var(--gold)' }}>your space</span> — before you buy
-          </h1>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '2.5rem' }}>
+            <span style={{ 
+              fontFamily: 'var(--font-display)', 
+              fontSize: 'clamp(2.5rem, 6vw, 4.5rem)', 
+              fontWeight: 500, 
+              letterSpacing: '0.08em', 
+              color: 'var(--charcoal)',
+              textTransform: 'uppercase',
+              lineHeight: 1.1
+            }}>
+              Stratum
+            </span>
+            <span style={{ 
+              fontFamily: 'var(--font-body)', 
+              fontSize: 'clamp(0.6875rem, 1.5vw, 0.8125rem)', 
+              fontWeight: 500, 
+              letterSpacing: '0.35em', 
+              color: 'var(--gold)', 
+              textTransform: 'uppercase',
+              marginLeft: '0.35em',
+              marginTop: '0.25rem'
+            }}>
+              by DSYN Luxury
+            </span>
+          </div>
+          <h2 style={{ marginBottom:'1.25rem', color:'var(--charcoal-light)', fontFamily:'var(--font-display)', fontSize:'clamp(1.5rem, 3vw, 2.25rem)' }}>
+            See stone in <span style={{ color:'var(--gold)' }}>your space</span> — before you buy
+          </h2>
           <p style={{ maxWidth:520, margin:'0 auto 2.5rem', fontSize:'1.0625rem', color:'var(--charcoal-light)', lineHeight:1.7 }}>
-            Upload a photo of your room. Our AI places Arteffects marble, stone, and mouldings exactly where you want them — with real lighting, texture, and finish.
+            Upload a photo of your room. Our AI places premium marble, Gwalior stone, and mouldings exactly where you want them — with real lighting, texture, and finish.
           </p>
           <div style={{ display:'flex', gap:'1rem', justifyContent:'center', flexWrap:'wrap' }}>
             <Link to="/visualizer" className="btn btn-primary btn-lg">

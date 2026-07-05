@@ -10,7 +10,7 @@ const fs = require('fs');
 const os = require('os');
 const axios = require('axios');
 
-const PYTHON_API_URL = process.env.PYTHON_API_URL || 'http://localhost:8000';
+const PYTHON_API_URL = (process.env.PYTHON_API_URL || 'http://localhost:8000').replace(/\/+$/, '');
 
 /**
  * Download image from URL to a temp file
