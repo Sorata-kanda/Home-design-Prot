@@ -34,8 +34,7 @@ export default function RegisterPage() {
       if (window.google && step === 'register' && active) {
         window.google.accounts.id.initialize({
           client_id: process.env.REACT_APP_GOOGLE_CLIENT_ID || '867552162537735-fakeclientid.apps.googleusercontent.com',
-          callback: handleGoogleCredentialResponse,
-          ux_mode: 'redirect'
+          callback: handleGoogleCredentialResponse
         });
         setTimeout(() => {
           if (!active) return;

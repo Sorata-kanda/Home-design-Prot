@@ -16,8 +16,7 @@ export default function LoginPage() {
       if (window.google && active) {
         window.google.accounts.id.initialize({
           client_id: process.env.REACT_APP_GOOGLE_CLIENT_ID || '867552162537735-fakeclientid.apps.googleusercontent.com',
-          callback: handleGoogleCredentialResponse,
-          ux_mode: 'redirect'
+          callback: handleGoogleCredentialResponse
         });
         const btn = document.getElementById('google-signin-btn');
         if (btn) {
