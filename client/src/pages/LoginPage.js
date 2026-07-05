@@ -19,7 +19,7 @@ export default function LoginPage() {
         });
         window.google.accounts.id.renderButton(
           document.getElementById('google-signin-btn'),
-          { theme: 'outline', size: 'large', width: 336, text: 'signin_with' }
+          { theme: 'outline', size: 'large', width: window.innerWidth < 400 ? 280 : 336, text: 'signin_with' }
         );
       }
     };
@@ -102,8 +102,8 @@ export default function LoginPage() {
             <div style={{ flex: 1, height: '1px', background: 'var(--border)' }}></div>
           </div>
           
-          <div style={{ display: 'flex', justifyContent: 'center' }}>
-            <div id="google-signin-btn"></div>
+          <div style={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
+            <div id="google-signin-btn" style={{ display: 'flex', justifyContent: 'center', width: '100%' }}></div>
           </div>
         </div>
         <p style={{ textAlign:'center', marginTop:'1.25rem', fontSize:'0.875rem' }}>

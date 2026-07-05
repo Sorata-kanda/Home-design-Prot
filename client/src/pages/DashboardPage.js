@@ -63,7 +63,7 @@ export default function DashboardPage() {
             <Link to="/visualizer" className="btn btn-primary btn-lg">Create your first visualization</Link>
           </div>
         ) : (
-          <div className="grid-3" style={{ gridTemplateColumns:'repeat(auto-fill, minmax(300px, 1fr))' }}>
+          <div className="grid-3" style={{ gridTemplateColumns:'repeat(auto-fill, minmax(260px, 1fr))' }}>
             {renders.map(render => (
               <div key={render._id} className="card" style={{ padding:0, overflow:'hidden' }}>
                 {/* Before/After thumbnails */}
