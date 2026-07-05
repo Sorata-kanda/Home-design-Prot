@@ -19,7 +19,7 @@ export default function LoginPage() {
         });
         window.google.accounts.id.renderButton(
           document.getElementById('google-signin-btn'),
-          { theme: 'outline', size: 'large', width: 336, text: 'signin_with' }
+          { theme: 'outline', size: 'large', width: window.innerWidth < 400 ? 280 : 336, text: 'signin_with' }
         );
       }
     };

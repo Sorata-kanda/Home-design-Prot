@@ -40,7 +40,7 @@ export default function RegisterPage() {
           if (btnDiv) {
             window.google.accounts.id.renderButton(
               btnDiv,
-              { theme: 'outline', size: 'large', width: 336, text: 'signup_with' }
+              { theme: 'outline', size: 'large', width: window.innerWidth < 400 ? 280 : 336, text: 'signup_with' }
             );
           }
         }, 50);
@@ -135,7 +135,7 @@ export default function RegisterPage() {
                   <label>Full name *</label>
                   <input type="text" value={form.name} onChange={set('name')} required placeholder="Your name" />
                 </div>
-                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'0.875rem' }}>
+                <div className="form-grid-2">
                   <div>
                     <label>Email *</label>
                     <input type="email" value={form.email} onChange={set('email')} required placeholder="you@email.com" />
