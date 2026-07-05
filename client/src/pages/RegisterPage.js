@@ -125,7 +125,7 @@ export default function RegisterPage() {
             <Layers size={24} color="white" />
           </div>
           <h2>Create your account</h2>
-          <p style={{ margin:'0.5rem 0 0' }}>Stratum by DSYN · Save renders and track quotes</p>
+          <p style={{ margin:'0.5rem 0 0' }}>Save renders, track quotes, share with clients</p>
         </div>
         <div className="card">
           {step === 'register' ? (

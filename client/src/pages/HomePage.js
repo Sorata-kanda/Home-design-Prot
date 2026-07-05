@@ -42,10 +42,10 @@ export default function HomePage() {
               fontFamily: 'var(--font-body)', 
               fontSize: 'clamp(0.6875rem, 1.5vw, 0.8125rem)', 
               fontWeight: 500, 
-              letterSpacing: '0.5em', 
+              letterSpacing: '0.35em', 
               color: 'var(--gold)', 
               textTransform: 'uppercase',
-              marginLeft: '0.5em',
+              marginLeft: '0.35em',
               marginTop: '0.25rem'
             }}>
               by DSYN Luxury

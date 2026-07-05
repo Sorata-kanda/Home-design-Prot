@@ -77,7 +77,7 @@ export default function LoginPage() {
             <Layers size={24} color="white" />
           </div>
           <h2>Sign in to Stratum</h2>
-          <p style={{ margin:'0.5rem 0 0' }}>by DSYN Luxury · Access saved renders</p>
+          <p style={{ margin:'0.5rem 0 0' }}>Access your visualizations and saved renders</p>
         </div>
         <div className="card">
           <form onSubmit={handleSubmit} style={{ display:'flex', flexDirection:'column', gap:'1rem' }}>
