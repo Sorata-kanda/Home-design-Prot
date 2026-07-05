@@ -29,15 +29,19 @@ export default function RegisterPage() {
   }, [timer]);
 
   useEffect(() => {
+    let active = true;
     const initializeGoogleSignIn = () => {
-      if (window.google && step === 'register') {
+      if (window.google && step === 'register' && active) {
         window.google.accounts.id.initialize({
           client_id: process.env.REACT_APP_GOOGLE_CLIENT_ID || '867552162537735-fakeclientid.apps.googleusercontent.com',
           callback: handleGoogleCredentialResponse,
+          ux_mode: 'redirect'
         });
         setTimeout(() => {
+          if (!active) return;
           const btnDiv = document.getElementById('google-signup-btn');
           if (btnDiv) {
+            btnDiv.innerHTML = '';
             window.google.accounts.id.renderButton(
               btnDiv,
               { theme: 'outline', size: 'large', width: window.innerWidth < 400 ? 280 : 336, text: 'signup_with' }
@@ -58,6 +62,9 @@ export default function RegisterPage() {
     } else {
       initializeGoogleSignIn();
     }
+    return () => {
+      active = false;
+    };
   }, [step]);
 
   const handleGoogleCredentialResponse = async (response) => {

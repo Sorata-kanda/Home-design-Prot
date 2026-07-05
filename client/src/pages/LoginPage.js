@@ -11,16 +11,22 @@ export default function LoginPage() {
   const navigate = useNavigate();
 
   useEffect(() => {
+    let active = true;
     const initializeGoogleSignIn = () => {
-      if (window.google) {
+      if (window.google && active) {
         window.google.accounts.id.initialize({
           client_id: process.env.REACT_APP_GOOGLE_CLIENT_ID || '867552162537735-fakeclientid.apps.googleusercontent.com',
           callback: handleGoogleCredentialResponse,
+          ux_mode: 'redirect'
         });
-        window.google.accounts.id.renderButton(
-          document.getElementById('google-signin-btn'),
-          { theme: 'outline', size: 'large', width: window.innerWidth < 400 ? 280 : 336, text: 'signin_with' }
-        );
+        const btn = document.getElementById('google-signin-btn');
+        if (btn) {
+          btn.innerHTML = '';
+          window.google.accounts.id.renderButton(
+            btn,
+            { theme: 'outline', size: 'large', width: window.innerWidth < 400 ? 280 : 336, text: 'signin_with' }
+          );
+        }
       }
     };
 
@@ -35,6 +41,9 @@ export default function LoginPage() {
     } else {
       initializeGoogleSignIn();
     }
+    return () => {
+      active = false;
+    };
   }, []);
 
   const handleGoogleCredentialResponse = async (response) => {
