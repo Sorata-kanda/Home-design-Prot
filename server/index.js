@@ -11,16 +11,20 @@ const app = express();
 app.set("trust proxy", 1);
 
 // Middleware
-const clientUrl = (process.env.CLIENT_URL || "http://localhost:3000").replace(/\/+$/, "");
+const clientUrls = (process.env.CLIENT_URL || "http://localhost:3000")
+    .split(/\|\||,/)
+    .map(url => url.trim().replace(/\/+$/, "").toLowerCase());
+
 app.use(
     cors({
         origin: (origin, callback) => {
             // Allow requests with no origin (like mobile apps, curl, or postman)
             if (!origin) return callback(null, true);
             
-            const isLocal = origin.startsWith("http://localhost:") || origin.startsWith("http://127.0.0.1:");
-            const isVercel = origin.endsWith(".vercel.app");
-            const isConfiguredClient = origin.replace(/\/+$/, "") === clientUrl;
+            const normalizedOrigin = origin.replace(/\/+$/, "").toLowerCase();
+            const isLocal = normalizedOrigin.startsWith("http://localhost:") || normalizedOrigin.startsWith("http://127.0.0.1:");
+            const isVercel = normalizedOrigin.endsWith(".vercel.app");
+            const isConfiguredClient = clientUrls.includes(normalizedOrigin);
             
             if (isLocal || isVercel || isConfiguredClient) {
                 callback(null, true);
