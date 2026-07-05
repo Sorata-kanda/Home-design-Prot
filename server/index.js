@@ -14,7 +14,20 @@ app.set("trust proxy", 1);
 const clientUrl = (process.env.CLIENT_URL || "http://localhost:3000").replace(/\/+$/, "");
 app.use(
     cors({
-        origin: [clientUrl, `${clientUrl}/`],
+        origin: (origin, callback) => {
+            // Allow requests with no origin (like mobile apps, curl, or postman)
+            if (!origin) return callback(null, true);
+            
+            const isLocal = origin.startsWith("http://localhost:") || origin.startsWith("http://127.0.0.1:");
+            const isVercel = origin.endsWith(".vercel.app");
+            const isConfiguredClient = origin.replace(/\/+$/, "") === clientUrl;
+            
+            if (isLocal || isVercel || isConfiguredClient) {
+                callback(null, true);
+            } else {
+                callback(new Error(`Origin ${origin} not allowed by CORS`));
+            }
+        },
         credentials: true,
     }),
 );
