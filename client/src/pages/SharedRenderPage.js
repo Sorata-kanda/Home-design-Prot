@@ -38,7 +38,7 @@ export default function SharedRenderPage() {
       <div style={{ background:'var(--charcoal)', color:'white', padding:'2rem 0' }}>
         <div className="container" style={{ textAlign:'center' }}>
           <p style={{ color:'var(--gold-light)', fontSize:'0.8125rem', fontWeight:600, letterSpacing:'0.08em', textTransform:'uppercase', marginBottom:8 }}>
-            Arteffects Room Visualization
+            Stratum Room Visualization
           </p>
           <h2 style={{ color:'white', marginBottom:0 }}>{render.title || 'Room Visualization'}</h2>
         </div>

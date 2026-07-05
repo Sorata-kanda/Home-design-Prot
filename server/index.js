@@ -11,9 +11,27 @@ const app = express();
 app.set("trust proxy", 1);
 
 // Middleware
+const clientUrls = (process.env.CLIENT_URL || "http://localhost:3000")
+    .split(/\|\||,/)
+    .map(url => url.trim().replace(/\/+$/, "").toLowerCase());
+
 app.use(
     cors({
-        origin: process.env.CLIENT_URL || "http://localhost:3000",
+        origin: (origin, callback) => {
+            // Allow requests with no origin (like mobile apps, curl, or postman)
+            if (!origin) return callback(null, true);
+            
+            const normalizedOrigin = origin.replace(/\/+$/, "").toLowerCase();
+            const isLocal = normalizedOrigin.startsWith("http://localhost:") || normalizedOrigin.startsWith("http://127.0.0.1:");
+            const isVercel = normalizedOrigin.endsWith(".vercel.app");
+            const isConfiguredClient = clientUrls.includes(normalizedOrigin);
+            
+            if (isLocal || isVercel || isConfiguredClient) {
+                callback(null, true);
+            } else {
+                callback(new Error(`Origin ${origin} not allowed by CORS`));
+            }
+        },
         credentials: true,
     }),
 );

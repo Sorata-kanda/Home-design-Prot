@@ -31,9 +31,14 @@ export default function Navbar() {
           <div style={{ width:36, height:36, background:'var(--gold)', borderRadius:8, display:'flex', alignItems:'center', justifyContent:'center' }}>
             <Layers size={18} color="white" />
           </div>
-          <span style={{ fontFamily:'var(--font-display)', fontSize:'1.25rem', fontWeight:600, color:'var(--charcoal)' }}>
-            Arteffects
-          </span>
+          <div style={{ display:'flex', alignItems:'baseline', gap:'4px' }}>
+            <span style={{ fontFamily:'var(--font-display)', fontSize:'1.4rem', fontWeight:800, color:'var(--charcoal)', letterSpacing:'0.03em', textTransform:'uppercase' }}>
+              Stratum
+            </span>
+            <span style={{ fontFamily:'var(--font-body)', fontSize:'0.625rem', fontWeight:600, color:'var(--gold-dark)', letterSpacing:'0.05em', textTransform:'uppercase' }}>
+              by DSYN
+            </span>
+          </div>
         </Link>
 
         {/* Desktop nav */}
