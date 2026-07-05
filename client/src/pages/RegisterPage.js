@@ -164,8 +164,8 @@ export default function RegisterPage() {
                 <div style={{ flex: 1, height: '1px', background: 'var(--border)' }}></div>
               </div>
               
-              <div style={{ display: 'flex', justifyContent: 'center' }}>
-                <div id="google-signup-btn"></div>
+              <div style={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
+                <div id="google-signup-btn" style={{ display: 'flex', justifyContent: 'center', width: '100%' }}></div>
               </div>
             </>
           ) : (

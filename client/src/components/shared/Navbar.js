@@ -60,7 +60,7 @@ export default function Navbar() {
         {/* Auth area */}
         <div style={{ display:'flex', alignItems:'center', gap:'0.75rem' }}>
           {user ? (
-            <>
+            <div className="desktop-nav" style={{ display:'flex', alignItems:'center', gap:'0.75rem' }}>
               <Link to="/dashboard" className="btn btn-ghost btn-sm" style={{ display:'flex', alignItems:'center', gap:6 }}>
                 <User size={15} />
                 <span className="hidden-mobile">
@@ -75,12 +75,12 @@ export default function Navbar() {
               <button onClick={handleLogout} className="btn btn-ghost btn-sm" title="Sign out">
                 <LogOut size={15} />
               </button>
-            </>
+            </div>
           ) : (
-            <>
+            <div className="desktop-nav" style={{ display:'flex', gap:'0.75rem' }}>
               <Link to="/login" className="btn btn-ghost btn-sm">Sign in</Link>
               <Link to="/register" className="btn btn-primary btn-sm">Get started</Link>
-            </>
+            </div>
           )}
 
           {/* Mobile menu toggle */}
@@ -107,7 +107,8 @@ export default function Navbar() {
             { path:'/', label:'Home' },
             { path:'/visualizer', label:'AI Visualizer' },
             { path:'/products', label:'Products' },
-            ...(user ? [{ path:'/dashboard', label:'My Renders' }] : [])
+            ...(user ? [{ path:'/dashboard', label:'My Renders' }] : []),
+            ...(isAdmin ? [{ path:'/admin', label:'Admin Panel' }] : [])
           ].map(({ path, label }) => (
             <Link key={path} to={path} onClick={() => setOpen(false)} style={{
               display:'block', padding:'0.625rem 0',
