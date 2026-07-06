@@ -23,7 +23,8 @@ router.get('/dashboard', async (req, res) => {
     const recentQuotes = await Quote.find({ status: 'new' })
       .sort({ createdAt: -1 })
       .limit(5)
-      .select('contactName contactPhone city totalEstimate createdAt');
+      .select('contactName contactPhone city totalEstimate createdAt')
+      .lean();
 
     res.json({ stats: { users, products, renders, quotes, newQuotes }, recentQuotes });
   } catch (err) {
@@ -34,7 +35,7 @@ router.get('/dashboard', async (req, res) => {
 // GET /api/admin/users
 router.get('/users', async (req, res) => {
   try {
-    const users = await User.find({}).sort({ createdAt: -1 }).select('-password');
+    const users = await User.find({}).sort({ createdAt: -1 }).limit(50).select('-password').lean();
     res.json({ users });
   } catch (err) {
     res.status(500).json({ error: err.message });

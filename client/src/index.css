@@ -143,6 +143,17 @@ label {
 .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.25rem; }
 .grid-4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; }
 
+.grid-before-after {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+@media (max-width: 768px) {
+  .grid-before-after {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Scrollbar */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
@@ -167,4 +178,114 @@ label {
   .card { padding: 1rem; }
   .section { padding: 2.5rem 0; }
   .btn-lg { padding: 0.75rem 1.5rem; font-size: 0.9375rem; }
+}
+
+/* Responsive Visualizer Layout & Mobile Helpers */
+.hidden-mobile {
+  display: inline-block !important;
+}
+
+.visualizer-page-wrapper {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100vh - 64px);
+  height: auto;
+  background: var(--cream);
+  overflow: auto;
+}
+
+.visualizer-page-wrapper.locked {
+  height: calc(100vh - 64px);
+  overflow: hidden;
+}
+
+@media (max-width: 768px) {
+  .visualizer-page-wrapper.locked {
+    height: auto;
+    overflow: visible;
+  }
+}
+
+.visualizer-container {
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  flex: 1;
+  overflow: hidden;
+  gap: 0;
+}
+
+.visualizer-left-panel {
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.visualizer-right-panel {
+  border-left: 1px solid var(--border);
+  background: var(--warm-white);
+  overflow-y: auto;
+  height: 100%;
+}
+
+@media (max-width: 768px) {
+  .hidden-mobile {
+    display: none !important;
+  }
+  
+  .visualizer-container {
+    display: flex;
+    flex-direction: column;
+    overflow: visible;
+  }
+  
+  .visualizer-left-panel {
+    position: relative;
+    height: 45vh !important;
+  }
+  
+  .visualizer-right-panel {
+    border-left: none;
+    border-top: 1px solid var(--border);
+    height: auto;
+    overflow: visible;
+  }
+}
+
+.visualizer-overlay-badges {
+  position: absolute;
+  left: 12px;
+  top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+  z-index: 5;
+}
+
+@media (max-width: 768px) {
+  .visualizer-overlay-badges {
+    top: auto;
+    bottom: 12px;
+    flex-direction: row;
+    overflow-x: auto;
+    max-width: calc(100% - 24px);
+    pointer-events: auto;
+    scrollbar-width: none; /* Hide scrollbars on mobile */
+  }
+  .visualizer-overlay-badges::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+.form-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.875rem;
+}
+
+@media (max-width: 560px) {
+  .form-grid-2 {
+    grid-template-columns: 1fr;
+  }
 }

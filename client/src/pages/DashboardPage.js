@@ -63,7 +63,7 @@ export default function DashboardPage() {
             <Link to="/visualizer" className="btn btn-primary btn-lg">Create your first visualization</Link>
           </div>
         ) : (
-          <div className="grid-3" style={{ gridTemplateColumns:'repeat(auto-fill, minmax(300px, 1fr))' }}>
+          <div className="grid-3" style={{ gridTemplateColumns:'repeat(auto-fill, minmax(260px, 1fr))' }}>
             {renders.map(render => (
               <div key={render._id} className="card" style={{ padding:0, overflow:'hidden' }}>
                 {/* Before/After thumbnails */}
@@ -101,7 +101,7 @@ export default function DashboardPage() {
 
                   {/* Actions */}
                   <div style={{ display:'flex', gap:6 }}>
-                    <a href={render.renderedPhoto?.url} download className="btn btn-secondary btn-sm" style={{ flex:1, justifyContent:'center' }}>
+                    <a href={render.watermarkedUrl || render.renderedPhoto?.url} download="arteffects-visualization.jpg" target="_blank" rel="noopener noreferrer" className="btn btn-secondary btn-sm" style={{ flex:1, justifyContent:'center' }}>
                       Download
                     </a>
                     <button onClick={() => shareMutation.mutate(render._id)} className="btn btn-ghost btn-sm" title="Share">

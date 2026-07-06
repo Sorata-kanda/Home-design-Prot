@@ -115,15 +115,15 @@ export default function AdminPage() {
   const toggleZone = (zone) => setProductForm(f => ({ ...f, applicableZones: f.applicableZones.includes(zone) ? f.applicableZones.filter(z => z !== zone) : [...f.applicableZones, zone] }));
 
   return (
-    <div style={{ minHeight:'calc(100vh - 64px)', background:'var(--cream)' }}>
+    <div style={{ minHeight:'calc(100vh - 64px)', background:'var(--cream)', overflowX:'hidden' }}>
       {/* Admin header */}
-      <div style={{ background:'var(--charcoal)', color:'white', padding:'1.5rem 0' }}>
-        <div className="container" style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-          <h2 style={{ color:'var(--gold-light)', margin:0 }}>Admin Panel</h2>
-          <div style={{ display:'flex', gap:'0.5rem' }}>
+      <div style={{ background:'var(--charcoal)', color:'white', padding:'1.25rem 0' }}>
+        <div className="container" style={{ display:'flex', flexDirection:'column', gap:'0.75rem' }}>
+          <h2 style={{ color:'var(--gold-light)', margin:0, fontSize:'1.25rem' }}>Admin Panel</h2>
+          <div style={{ display:'flex', gap:'0.5rem', overflowX:'auto', WebkitOverflowScrolling:'touch', paddingBottom:'2px' }}>
             {TABS.map(t => (
               <button key={t} onClick={() => setTab(t)} className="btn btn-sm"
-                style={{ background: tab === t ? 'var(--gold)' : 'transparent', color: tab === t ? 'var(--charcoal)' : 'rgba(255,255,255,0.7)', border: tab === t ? 'none' : '1px solid rgba(255,255,255,0.2)' }}>
+                style={{ background: tab === t ? 'var(--gold)' : 'transparent', color: tab === t ? 'var(--charcoal)' : 'rgba(255,255,255,0.7)', border: tab === t ? 'none' : '1px solid rgba(255,255,255,0.2)', whiteSpace:'nowrap', flexShrink:0 }}>
                 {t}
               </button>
             ))}
@@ -138,7 +138,7 @@ export default function AdminPage() {
           <div>
             {dashData && (
               <>
-                <div className="grid-4" style={{ marginBottom:'2rem' }}>
+                <div style={{ display:'grid', gridTemplateColumns:'repeat(2, 1fr)', gap:'0.75rem', marginBottom:'2rem' }}>
                   {[
                     { label:'Clients', value: dashData.stats.users, icon: Users, color:'#3b82f6' },
                     { label:'Products', value: dashData.stats.products, icon: Package, color:'var(--gold)' },
@@ -200,11 +200,11 @@ export default function AdminPage() {
             <div style={{ display:'grid', gap:'0.75rem' }}>
               {productsData?.products?.map(product => (
                 <div key={product._id} style={{
-                  display:'flex', alignItems:'center', gap:'1rem', padding:'0.875rem 1rem',
-                  background:'var(--warm-white)', borderRadius:12, border:'1px solid var(--border)'
+                  display:'flex', alignItems:'center', gap:'0.75rem', padding:'0.75rem',
+                  background:'var(--warm-white)', borderRadius:12, border:'1px solid var(--border)', overflow:'hidden'
                 }}>
                   <img src={product.textureImage?.url || product.thumbnailImage?.url} alt=""
-                    style={{ width:52, height:52, borderRadius:8, objectFit:'cover', flexShrink:0 }}
+                    style={{ width:40, height:40, borderRadius:8, objectFit:'cover', flexShrink:0 }}
                     onError={e => { e.target.style.display='none'; }} />
                   <div style={{ flex:1, minWidth:0 }}>
                     <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' }}>
@@ -213,8 +213,8 @@ export default function AdminPage() {
                       {product.isFeatured && <span className="badge badge-gold" style={{ fontSize:'0.6875rem' }}>Featured</span>}
                       {product.isNeoClassicalPreset && <span className="badge badge-stone" style={{ fontSize:'0.6875rem' }}>Preset</span>}
                     </div>
-                    <p style={{ margin:'2px 0 0', fontSize:'0.8125rem', color:'var(--charcoal-light)' }}>
-                      {CATEGORY_LABELS[product.category]} · ₹{product.pricePerSqFt}/sq.ft · {product.finish} · {product.grade}
+                    <p style={{ margin:'2px 0 0', fontSize:'0.75rem', color:'var(--charcoal-light)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                      {CATEGORY_LABELS[product.category]} · ₹{product.pricePerSqFt}/sq.ft · {product.finish}
                     </p>
                   </div>
                   <div style={{ display:'flex', gap:6, flexShrink:0 }}>
@@ -270,20 +270,18 @@ export default function AdminPage() {
                     </p>
                   )}
 
-                  <div style={{ display:'flex', gap:'0.625rem', alignItems:'center', flexWrap:'wrap' }}>
-                    <span style={{ fontSize:'0.75rem', color:'var(--charcoal-light)' }}>
-                      <Clock size={11} style={{ verticalAlign:'middle' }} /> {new Date(quote.createdAt).toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' })}
-                    </span>
-                    <span style={{ fontSize:'0.75rem', color:'var(--charcoal-light)' }}>· {quote.projectType}</span>
-                    <div style={{ marginLeft:'auto', display:'flex', gap:6 }}>
-                      {['new', 'contacted', 'quoted', 'won', 'lost'].map(s => (
-                        <button key={s} onClick={() => quoteStatusMutation.mutate({ id: quote._id, status: s })}
-                          className="btn btn-sm"
-                          style={{ background: quote.status === s ? 'var(--charcoal)' : 'transparent', color: quote.status === s ? 'white' : 'var(--charcoal-light)', border:'1px solid var(--border)', padding:'0.25rem 0.625rem', fontSize:'0.75rem' }}>
-                          {s}
-                        </button>
-                      ))}
-                    </div>
+                  <div style={{ fontSize:'0.75rem', color:'var(--charcoal-light)', marginBottom:'0.5rem' }}>
+                    <Clock size={11} style={{ verticalAlign:'middle' }} /> {new Date(quote.createdAt).toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' })}
+                    {' · '}{quote.projectType}
+                  </div>
+                  <div style={{ display:'flex', gap:4, flexWrap:'wrap' }}>
+                    {['new', 'contacted', 'quoted', 'won', 'lost'].map(s => (
+                      <button key={s} onClick={() => quoteStatusMutation.mutate({ id: quote._id, status: s })}
+                        className="btn btn-sm"
+                        style={{ background: quote.status === s ? 'var(--charcoal)' : 'transparent', color: quote.status === s ? 'white' : 'var(--charcoal-light)', border:'1px solid var(--border)', padding:'0.2rem 0.5rem', fontSize:'0.6875rem' }}>
+                        {s}
+                      </button>
+                    ))}
                   </div>
                 </div>
               ))}
@@ -300,19 +298,16 @@ export default function AdminPage() {
             <h3 style={{ marginBottom:'1.5rem' }}>Registered users ({usersData?.users?.length || 0})</h3>
             <div style={{ display:'grid', gap:'0.625rem' }}>
               {usersData?.users?.map(user => (
-                <div key={user._id} style={{ display:'flex', alignItems:'center', gap:'1rem', padding:'0.875rem 1rem', background:'var(--warm-white)', borderRadius:12, border:'1px solid var(--border)' }}>
+                <div key={user._id} style={{ display:'flex', alignItems:'center', gap:'0.75rem', padding:'0.75rem', background:'var(--warm-white)', borderRadius:12, border:'1px solid var(--border)', overflow:'hidden' }}>
                   <div style={{ width:36, height:36, background:'rgba(201,168,76,0.15)', borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', fontWeight:600, fontSize:'0.875rem', color:'var(--gold-dark)', flexShrink:0 }}>
                     {user.name.split(' ').map(n => n[0]).join('').slice(0,2).toUpperCase()}
                   </div>
                   <div style={{ flex:1, minWidth:0 }}>
                     <p style={{ fontWeight:500, margin:0, color:'var(--charcoal)' }}>{user.name}</p>
-                    <p style={{ fontSize:'0.8125rem', margin:0, color:'var(--charcoal-light)' }}>{user.email} {user.phone && `· ${user.phone}`} {user.city && `· ${user.city}`}</p>
+                    <p style={{ fontSize:'0.75rem', margin:0, color:'var(--charcoal-light)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{user.email}</p>
                   </div>
-                  <div style={{ display:'flex', gap:6, alignItems:'center' }}>
-                    {user.role === 'admin' && <span className="badge badge-gold">Admin</span>}
-                    <span style={{ fontSize:'0.75rem', color:'var(--charcoal-light)' }}>
-                      {new Date(user.createdAt).toLocaleDateString('en-IN')}
-                    </span>
+                  <div style={{ display:'flex', gap:4, alignItems:'center', flexShrink:0 }}>
+                    {user.role === 'admin' && <span className="badge badge-gold" style={{ fontSize:'0.625rem', padding:'0.1rem 0.4rem' }}>Admin</span>}
                   </div>
                 </div>
               ))}
@@ -334,7 +329,7 @@ export default function AdminPage() {
             </div>
 
             <form onSubmit={handleSaveProduct} style={{ padding:'1.5rem', display:'flex', flexDirection:'column', gap:'1rem' }}>
-              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'1rem' }}>
+              <div className="form-grid-2">
                 <div>
                   <label>SKU *</label>
                   <input value={productForm.sku} onChange={pf('sku')} placeholder="MRB-001" required style={{ textTransform:'uppercase' }} />
@@ -348,7 +343,7 @@ export default function AdminPage() {
                 <label>Product name *</label>
                 <input value={productForm.name} onChange={pf('name')} placeholder="Italian Carrara White Marble" required />
               </div>
-              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:'1rem' }}>
+              <div className="form-grid-2" style={{ gridTemplateColumns:'repeat(auto-fit, minmax(140px, 1fr))' }}>
                 <div>
                   <label>Category</label>
                   <select value={productForm.category} onChange={pf('category')}>
@@ -389,7 +384,7 @@ export default function AdminPage() {
                 <label>Description</label>
                 <textarea value={productForm.description} onChange={pf('description')} placeholder="Brief product description…" rows={3} />
               </div>
-              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'1rem' }}>
+              <div className="form-grid-2">
                 <div>
                   <label>Reflectivity (0–1)</label>
                   <input type="number" value={productForm.reflectivity} onChange={pf('reflectivity')} min={0} max={1} step={0.1} />

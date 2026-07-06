@@ -10,7 +10,8 @@ router.get('/', protect, async (req, res) => {
   try {
     const renders = await Render.find({ user: req.user._id })
       .populate('appliedProducts.product', 'name sku category pricePerSqFt')
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
     res.json({ renders });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -21,7 +22,8 @@ router.get('/', protect, async (req, res) => {
 router.get('/:id', protect, async (req, res) => {
   try {
     const render = await Render.findOne({ _id: req.params.id, user: req.user._id })
-      .populate('appliedProducts.product');
+      .populate('appliedProducts.product')
+      .lean();
     if (!render) return res.status(404).json({ error: 'Render not found' });
     res.json({ render });
   } catch (err) {
@@ -49,7 +51,8 @@ router.post('/:id/share', protect, async (req, res) => {
 router.get('/shared/:token', async (req, res) => {
   try {
     const render = await Render.findOne({ shareToken: req.params.token, isShared: true })
-      .populate('appliedProducts.product', 'name sku pricePerSqFt category');
+      .populate('appliedProducts.product', 'name sku textureImage category finish pricePerSqFt')
+      .lean();
     if (!render) return res.status(404).json({ error: 'Visualization not found' });
     res.json({ render });
   } catch (err) {

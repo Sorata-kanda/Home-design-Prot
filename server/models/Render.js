@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 const renderSchema = new mongoose.Schema({
-  user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: false },
   
   // Original uploaded photo
   originalPhoto: {
@@ -23,8 +23,7 @@ const renderSchema = new mongoose.Schema({
   appliedProducts: [{
     product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product' },
     zone: {
-      type: String,
-      enum: ['floor', 'wall', 'ceiling', 'pillar', 'cornice', 'wainscoting', 'elevation', 'exterior', 'staircase']
+      type: String
     },
     coverage: Number // estimated sq ft
   }],

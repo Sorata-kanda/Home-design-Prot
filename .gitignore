@@ -5,3 +5,9 @@ build/
 dist/
 .DS_Store
 *.log
+
+# Local/Python environment ignores
+server/venv/
+server/__pycache__/
+client/public/uploads/
+server/temp/

@@ -31,6 +31,9 @@ api.interceptors.response.use(
 export const authAPI = {
   register: data => api.post('/auth/register', data),
   login: data => api.post('/auth/login', data),
+  googleLogin: data => api.post('/auth/google', data),
+  verifyOTP: data => api.post('/auth/verify-otp', data),
+  resendOTP: data => api.post('/auth/resend-otp', data),
   me: () => api.get('/auth/me'),
   updateProfile: data => api.patch('/auth/profile', data)
 };
@@ -52,8 +55,10 @@ export const visualizerAPI = {
     headers: { 'Content-Type': 'multipart/form-data' },
     timeout: 30000
   }),
-  segment: photoUrl => api.post('/visualizer/segment', { photoUrl }),
-  generate: data => api.post('/visualizer/generate', data, { timeout: 120000 })
+  segment: (photoUrl) => api.post('/visualizer/segment', { photoUrl }, {
+    timeout: 150000 // 2.5 min — first run downloads SegFormer model (~85MB)
+  }),
+  generate: data => api.post('/visualizer/generate', data, { timeout: 300000 })
 };
 
 // Renders

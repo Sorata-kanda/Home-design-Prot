@@ -1,0 +1,398 @@
+"""
+Local two-stage room texture replacement pipeline
+Wrapped as a FastAPI Microservice
+GTX 1650 compatible (4GB VRAM)
+"""
+import os
+import time
+import uuid
+import cv2
+import numpy as np
+import torch
+import urllib.request
+import tempfile
+import gc
+from PIL import Image
+from transformers import SegformerForSemanticSegmentation, SegformerImageProcessor
+from fastapi import FastAPI, HTTPException
+from typing import List, Optional
+from pydantic import BaseModel
+from fastapi.staticfiles import StaticFiles
+
+# ── Config ─────────────────────────────────────────────────────────
+SEG_MODEL   = "nvidia/segformer-b0-finetuned-ade-512-512"
+DEVICE      = "cuda" if torch.cuda.is_available() else "cpu"
+
+ADE20K_ZONES = {
+    0:  "wall", 3: "floor", 5: "ceiling",
+    8:  "window", 14: "door", 12: "stairs", 17: "column"
+}
+
+# Ensure temp directory exists
+UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "temp")
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+# Pre-load SegFormer model and processor globally on server boot
+print(f"[Segmentation] Pre-loading SegFormer model '{SEG_MODEL}' on {DEVICE}...")
+PROCESSOR = SegformerImageProcessor.from_pretrained(SEG_MODEL, local_files_only=False)
+MODEL     = SegformerForSemanticSegmentation.from_pretrained(SEG_MODEL, local_files_only=False)
+MODEL.eval().to(DEVICE)
+if DEVICE == "cuda":
+    MODEL = MODEL.half()
+print("[Segmentation] Model pre-loaded successfully!")
+
+app = FastAPI(title="Arteffects Local AI API")
+app.mount("/temp", StaticFiles(directory=UPLOAD_DIR), name="temp")
+
+def load_image(path_or_url):
+    if path_or_url.startswith("http://") or path_or_url.startswith("https://"):
+        print(f"[Loader] Downloading remote image: {path_or_url}")
+        fd, temp_path = tempfile.mkstemp(suffix=".jpg")
+        try:
+            # Add user agent headers to prevent blocking by some websites/CDNs
+            req = urllib.request.Request(
+                path_or_url, 
+                headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
+            )
+            with urllib.request.urlopen(req) as response, open(temp_path, 'wb') as out_file:
+                out_file.write(response.read())
+            img = cv2.imread(temp_path)
+            if img is None:
+                raise ValueError("Failed to decode downloaded image")
+            return img, temp_path
+        finally:
+            os.close(fd)
+    else:
+        # Local file path
+        if not os.path.exists(path_or_url):
+            raise FileNotFoundError(f"Local file not found: {path_or_url}")
+        img = cv2.imread(path_or_url)
+        if img is None:
+            raise ValueError("Failed to read local image")
+        return img, None
+
+class SegmentRequest(BaseModel):
+    image_path: str
+
+class ZoneTexture(BaseModel):
+    zone: str
+    texture_image_path: str
+
+class GenerateRequest(BaseModel):
+    image_path: str
+    applied_zones: List[ZoneTexture]
+    preset: Optional[str] = None
+
+
+# ── Stage 1: Segmentation ───────────────────────────────────────────
+def get_segmentation_map(img_bgr):
+    h, w = img_bgr.shape[:2]
+    
+    # Downscale for segmentation if too large (saves massive PyTorch RAM)
+    max_dim = 1024
+    if h > max_dim or w > max_dim:
+        scale = max_dim / max(h, w)
+        seg_h, seg_w = int(h * scale), int(w * scale)
+        img_seg = cv2.resize(img_bgr, (seg_w, seg_h), interpolation=cv2.INTER_AREA)
+    else:
+        seg_h, seg_w = h, w
+        img_seg = img_bgr
+
+    pil_img = Image.fromarray(cv2.cvtColor(img_seg, cv2.COLOR_BGR2RGB))
+    inputs  = PROCESSOR(images=pil_img, return_tensors="pt").to(DEVICE)
+    if DEVICE == "cuda":
+        inputs["pixel_values"] = inputs["pixel_values"].half()
+
+    with torch.no_grad():
+        logits = MODEL(**inputs).logits
+
+    # Upsample to the downscaled shape (seg_h, seg_w) which is low-res, not the massive (h, w)
+    upsampled = torch.nn.functional.interpolate(
+        logits, size=(seg_h, seg_w), mode="bilinear", align_corners=False
+    )
+    pred_low = upsampled.argmax(dim=1).squeeze(0).cpu().numpy()
+
+    # If we downscaled, upscale the integer prediction mask back to the original size
+    if h > max_dim or w > max_dim:
+        pred = cv2.resize(
+            pred_low.astype(np.uint8), 
+            (w, h), 
+            interpolation=cv2.INTER_NEAREST
+        ).astype(int)
+    else:
+        pred = pred_low
+
+    return pred, h, w
+
+def run_segmentation_for_mask(img_bgr, target_zone):
+    pred, h, w = get_segmentation_map(img_bgr)
+    
+    # build binary mask for target zone
+    try:
+        zone_id = next(k for k, v in ADE20K_ZONES.items() if v == target_zone)
+    except StopIteration:
+        # Fallback if zone not mapped
+        zone_id = 0
+        
+    mask = ((pred == zone_id).astype(np.uint8) * 255)
+    pct = np.sum(mask > 0) / (h * w) * 100
+    print(f"    {target_zone} detected: {pct:.1f}% of image")
+    
+    return mask
+
+# ── Stage 2: Mask post-processing ──────────────────────────────────
+def prepare_mask(mask, img_shape):
+    print("[Mask Prep] Preparing mask...")
+    # dilate edges for natural blending
+    kernel = np.ones((12, 12), np.uint8)
+    mask   = cv2.dilate(mask, kernel, iterations=1)
+    # smooth edges
+    mask   = cv2.GaussianBlur(mask, (21, 21), 0)
+    _, mask = cv2.threshold(mask, 127, 255, cv2.THRESH_BINARY)
+    return mask
+
+
+# ── Stage 3: Texture Mapping ────────────────────────────────────────
+
+
+# ── Stage 4: Composite ──────────────────────────────────────────────
+def composite(original_bgr, inpainted_pil, mask):
+    print("[Composite] Compositing final image...")
+    inpainted_bgr = cv2.cvtColor(np.array(inpainted_pil), cv2.COLOR_RGB2BGR)
+
+    # soft blend using mask as alpha
+    mask_3ch  = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR).astype(float) / 255.0
+    blended   = (inpainted_bgr * mask_3ch + original_bgr * (1 - mask_3ch)).astype(np.uint8)
+    return blended
+
+
+# ── API Endpoints ────────────────────────────────────────────────────
+
+@app.post("/segment")
+def segment_endpoint(req: SegmentRequest):
+    """Returns all detected zones and their coverages (used for UI)."""
+    temp_file = None
+    try:
+        img, temp_file = load_image(req.image_path)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to load image: {str(e)}")
+
+    try:
+        pred, h, w = get_segmentation_map(img)
+        
+        zones = []
+        for label_id, zone_name in ADE20K_ZONES.items():
+            mask = (pred == label_id).astype(np.uint8) * 255
+            pixel_count = int(np.sum(mask > 0))
+            if pixel_count == 0:
+                continue
+
+            rows = np.where(np.any(mask > 0, axis=1))[0]
+            cols = np.where(np.any(mask > 0, axis=0))[0]
+            coverage = pixel_count / (h * w)
+
+            zones.append({
+                "name": zone_name,
+                "coverage": round(coverage, 4),
+                "pixel_count": pixel_count,
+                "bbox": {
+                    "x": int(cols[0]),
+                    "y": int(rows[0]),
+                    "w": int(cols[-1] - cols[0]),
+                    "h": int(rows[-1] - rows[0])
+                }
+            })
+
+        zones.sort(key=lambda z: z["coverage"], reverse=True)
+
+        return {
+            "zones": zones,
+            "image_size": {"width": w, "height": h}
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if temp_file and os.path.exists(temp_file):
+            try:
+                os.remove(temp_file)
+            except Exception as e:
+                print(f"[Loader] Error removing temp file: {e}")
+
+
+def run_texture_mapping(img_bgr, mask, texture_path):
+    print(f"[Texture Map] Loading actual product texture: {texture_path}")
+    texture_img = cv2.imread(texture_path)
+    if texture_img is None:
+        raise ValueError("Failed to load texture image")
+
+    # Find bounding box of the mask
+    y_indices, x_indices = np.where(mask > 0)
+    if len(x_indices) == 0 or len(y_indices) == 0:
+        return Image.fromarray(cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB))
+
+    x_min, x_max = int(x_indices.min()), int(x_indices.max())
+    y_min, y_max = int(y_indices.min()), int(y_indices.max())
+    w_box = x_max - x_min + 1
+    h_box = y_max - y_min + 1
+
+    # Tile the texture image to cover the bounding box
+    th, tw = texture_img.shape[:2]
+    repeat_x = int(np.ceil(w_box / tw))
+    repeat_y = int(np.ceil(h_box / th))
+    tiled = np.tile(texture_img, (repeat_y, repeat_x, 1))
+    tiled_cropped = tiled[0:h_box, 0:w_box]
+
+    # Crop the original image corresponding to the bounding box
+    orig_crop = img_bgr[y_min:y_max+1, x_min:x_max+1]
+    mask_crop = mask[y_min:y_max+1, x_min:x_max+1]
+
+    # Convert original crop to LAB to extract lighting
+    orig_lab = cv2.cvtColor(orig_crop, cv2.COLOR_BGR2LAB)
+    orig_L = orig_lab[:, :, 0].astype(float)
+
+    # Compute mean lightness of the target masked area to use as baseline
+    masked_pixels = orig_L[mask_crop > 0]
+    mean_L = np.mean(masked_pixels) if len(masked_pixels) > 0 else 128.0
+    if mean_L < 1.0:
+        mean_L = 1.0  # prevent division by zero
+
+    # Compute lighting ratio map
+    lighting_ratio = orig_L / mean_L
+
+    # Convert tiled texture to LAB and apply lighting ratio
+    tex_lab = cv2.cvtColor(tiled_cropped, cv2.COLOR_BGR2LAB)
+    tex_L = tex_lab[:, :, 0].astype(float)
+    new_L = np.clip(tex_L * lighting_ratio, 0, 255).astype(np.uint8)
+    tex_lab[:, :, 0] = new_L
+
+    # Convert back to BGR
+    mapped_bgr = cv2.cvtColor(tex_lab, cv2.COLOR_LAB2BGR)
+
+    # Place back in full-sized canvas
+    full_tiled_bgr = np.zeros_like(img_bgr)
+    full_tiled_bgr[y_min:y_max+1, x_min:x_max+1] = mapped_bgr
+
+    # Convert to RGB PIL Image so it matches SD output type for composite()
+    res = Image.fromarray(cv2.cvtColor(full_tiled_bgr, cv2.COLOR_BGR2RGB))
+
+    # Free heavy intermediate arrays
+    del tiled, tiled_cropped, orig_crop, mask_crop, orig_lab, tex_lab, full_tiled_bgr
+    gc.collect()
+
+    return res
+
+
+@app.post("/generate")
+def generate_endpoint(req: GenerateRequest):
+    """Runs the full pipeline to replace a texture in a specific zone."""
+    temp_img = None
+    temp_tex_files = []
+    try:
+        # Load main image (local or remote)
+        try:
+            img, temp_img = load_image(req.image_path)
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Failed to load base image: {str(e)}")
+
+        start_time = time.time()
+        current_img = img.copy()
+
+        print("[Segmentation] Running global inference map once...")
+        global_pred, global_h, global_w = get_segmentation_map(img)
+        downloaded_textures = {}
+
+        for ap in req.applied_zones:
+            # 1. Algorithmic Refactor: Extract mask from global_pred instead of re-running inference
+            try:
+                zone_id = next(k for k, v in ADE20K_ZONES.items() if v == ap.zone)
+            except StopIteration:
+                zone_id = 0
+            
+            mask = ((global_pred == zone_id).astype(np.uint8) * 255)
+            pct = np.sum(mask > 0) / (global_h * global_w) * 100
+            print(f"    {ap.zone} detected: {pct:.1f}% of image")
+            
+            # --- Wainscoting Hack ---
+            if req.preset == "wainscoting" and ap.zone == "wall":
+                # Crop top 60% of the wall mask
+                h, w = mask.shape
+                cutoff = int(h * 0.6)
+                mask[0:cutoff, :] = 0
+            # ------------------------
+
+            mask = prepare_mask(mask, img.shape)
+            
+            # Load texture image (local or remote)
+            if not ap.texture_image_path:
+                continue
+            
+            try:
+                if ap.texture_image_path in downloaded_textures:
+                    print(f"[Loader] Reusing cached texture: {ap.texture_image_path}")
+                    texture_path = downloaded_textures[ap.texture_image_path]
+                elif ap.texture_image_path.startswith("http://") or ap.texture_image_path.startswith("https://"):
+                    print(f"[Loader] Downloading remote texture: {ap.texture_image_path}")
+                    fd, temp_tex = tempfile.mkstemp(suffix=".jpg")
+                    try:
+                        # User agent header is important for Cloudinary images
+                        req_obj = urllib.request.Request(
+                            ap.texture_image_path, 
+                            headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
+                        )
+                        with urllib.request.urlopen(req_obj) as response, open(temp_tex, 'wb') as out_file:
+                            out_file.write(response.read())
+                        texture_path = temp_tex
+                        temp_tex_files.append(temp_tex)
+                        downloaded_textures[ap.texture_image_path] = temp_tex
+                    finally:
+                        os.close(fd)
+                else:
+                    if not os.path.exists(ap.texture_image_path):
+                        raise FileNotFoundError(f"Local texture path not found: {ap.texture_image_path}")
+                    texture_path = ap.texture_image_path
+            except Exception as e:
+                raise HTTPException(status_code=400, detail=f"Failed to load texture image: {str(e)}")
+                
+            print(f"[Texture Map] Mapping actual product texture from: {texture_path}")
+            inpainted = run_texture_mapping(current_img, mask, texture_path)
+                
+            current_img = composite(current_img, inpainted, mask)
+
+        # Save to public temp folder
+        filename = f"render_{uuid.uuid4().hex[:8]}.jpg"
+        output_path = os.path.join(UPLOAD_DIR, filename)
+        
+        cv2.imwrite(output_path, current_img, [cv2.IMWRITE_JPEG_QUALITY, 95])
+        
+        duration = time.time() - start_time
+        print(f"\nDone! Saved to {output_path} in {duration:.1f}s")
+        
+        # Return the public URL path
+        return {
+            "success": True,
+            "renderedUrl": f"/temp/{filename}",
+            "generationDuration": int(duration * 1000)
+        }
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        # Clean up all downloaded temp files
+        files_to_remove = [temp_img] + temp_tex_files
+        for f in files_to_remove:
+            if f and os.path.exists(f):
+                try:
+                    os.remove(f)
+                except Exception as e:
+                    print(f"[Loader] Error removing temp file: {e}")
+
+
+@app.get("/health")
+def health_check():
+    return {"status": "ok"}
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("segment_api:app", host="0.0.0.0", port=8000, reload=True)

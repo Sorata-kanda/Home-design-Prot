@@ -26,7 +26,7 @@ export default function SharedRenderPage() {
     <div style={{ textAlign:'center', padding:'5rem 1rem' }}>
       <h3 style={{ marginBottom:8 }}>Visualization not found</h3>
       <p style={{ marginBottom:'1.5rem' }}>This link may have expired or been removed.</p>
-      <Link to="/visualizer" className="btn btn-primary">Create your own</Link>
+      <Link to="/login" className="btn btn-primary">Create your own</Link>
     </div>
   );
 
@@ -38,7 +38,7 @@ export default function SharedRenderPage() {
       <div style={{ background:'var(--charcoal)', color:'white', padding:'2rem 0' }}>
         <div className="container" style={{ textAlign:'center' }}>
           <p style={{ color:'var(--gold-light)', fontSize:'0.8125rem', fontWeight:600, letterSpacing:'0.08em', textTransform:'uppercase', marginBottom:8 }}>
-            Arteffects Room Visualization
+            Stratum Room Visualization
           </p>
           <h2 style={{ color:'white', marginBottom:0 }}>{render.title || 'Room Visualization'}</h2>
         </div>
@@ -46,16 +46,16 @@ export default function SharedRenderPage() {
 
       <div className="container" style={{ padding:'2.5rem 1.25rem', maxWidth:960 }}>
         {/* Before / After */}
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'1rem', marginBottom:'2rem' }}>
-          <div style={{ borderRadius:16, overflow:'hidden', border:'1px solid var(--border)' }}>
+        <div className="grid-before-after" style={{ marginBottom:'2rem' }}>
+          <div style={{ borderRadius:16, overflow:'hidden', border:'1px solid var(--border)', display:'flex', flexDirection:'column' }}>
             <div style={{ padding:'0.5rem 1rem', background:'var(--charcoal)', color:'white', fontSize:'0.8125rem', fontWeight:500 }}>Before</div>
-            <img src={render.originalPhoto?.url} alt="Original room" style={{ width:'100%', display:'block' }} />
+            <img src={render.originalPhoto?.url} alt="Original room" style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }} />
           </div>
-          <div style={{ borderRadius:16, overflow:'hidden', border:'2px solid var(--gold)' }}>
+          <div style={{ borderRadius:16, overflow:'hidden', border:'2px solid var(--gold)', display:'flex', flexDirection:'column' }}>
             <div style={{ padding:'0.5rem 1rem', background:'var(--gold)', color:'var(--charcoal)', fontSize:'0.8125rem', fontWeight:600 }}>
               After — Arteffects
             </div>
-            <img src={render.renderedPhoto?.url || render.originalPhoto?.url} alt="Visualized" style={{ width:'100%', display:'block' }} />
+            <img src={render.watermarkedUrl || render.renderedPhoto?.url || render.originalPhoto?.url} alt="Visualized" style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }} />
           </div>
         </div>
 
@@ -90,7 +90,7 @@ export default function SharedRenderPage() {
           <button onClick={() => setShowQuote(true)} className="btn btn-primary btn-lg">
             <MessageSquare size={18} /> Request a quote
           </button>
-          <Link to="/visualizer" className="btn btn-secondary btn-lg">
+          <Link to="/login" className="btn btn-secondary btn-lg">
             <Wand2 size={18} /> Try with your room
           </Link>
         </div>

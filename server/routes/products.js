@@ -18,7 +18,8 @@ router.get('/', async (req, res) => {
     
     const products = await Product.find(filter)
       .select('sku name category pricePerSqFt finish grade applicableZones textureImage thumbnailImage tags isFeatured isNeoClassicalPreset presetType')
-      .sort({ isFeatured: -1, name: 1 });
+      .sort({ isFeatured: -1, category: 1, name: 1 })
+      .lean();
     
     res.json({ products, total: products.length });
   } catch (err) {
@@ -39,7 +40,7 @@ router.get('/categories', async (req, res) => {
 // GET /api/products/presets — neoclassical presets
 router.get('/presets', async (req, res) => {
   try {
-    const presets = await Product.find({ isNeoClassicalPreset: true, isAvailable: true });
+    const presets = await Product.find({ isNeoClassicalPreset: true, isAvailable: true }).lean();
     res.json({ presets });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -49,7 +50,7 @@ router.get('/presets', async (req, res) => {
 // GET /api/products/:id
 router.get('/:id', async (req, res) => {
   try {
-    const product = await Product.findById(req.params.id);
+    const product = await Product.findById(req.params.id).lean();
     if (!product) return res.status(404).json({ error: 'Product not found' });
     res.json({ product });
   } catch (err) {

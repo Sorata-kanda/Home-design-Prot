@@ -15,7 +15,7 @@ router.post('/', optionalAuth, async (req, res) => {
 
     // Enrich line items with current pricing
     const enrichedItems = await Promise.all((lineItems || []).map(async (item) => {
-      const product = await Product.findById(item.productId);
+      const product = await Product.findById(item.productId).lean();
       if (!product) return null;
       return {
         product: product._id,
@@ -55,7 +55,8 @@ router.get('/mine', protect, async (req, res) => {
   try {
     const quotes = await Quote.find({ user: req.user._id })
       .populate('lineItems.product', 'name sku')
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
     res.json({ quotes });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -73,7 +74,8 @@ router.get('/', protect, adminOnly, async (req, res) => {
       .populate('lineItems.product', 'name sku')
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
-      .limit(Number(limit));
+      .limit(Number(limit))
+      .lean();
     
     const total = await Quote.countDocuments(filter);
     res.json({ quotes, total, pages: Math.ceil(total / limit) });
