@@ -281,10 +281,15 @@ router.get('/me', protect, (req, res) => {
 // PATCH /api/auth/profile
 router.patch('/profile', protect, async (req, res) => {
   try {
-    const { name, phone, city } = req.body;
+    const { name, phone, city, address } = req.body;
+    
+    const updateData = { name, phone };
+    if (city !== undefined) updateData.city = city;
+    if (address !== undefined) updateData.address = address;
+
     const user = await User.findByIdAndUpdate(
       req.user._id,
-      { name, phone, city },
+      updateData,
       { new: true, runValidators: true }
     );
     res.json({ user });

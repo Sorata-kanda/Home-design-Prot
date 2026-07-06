@@ -9,6 +9,12 @@ const userSchema = new mongoose.Schema({
   googleId: { type: String, unique: true, sparse: true },
   role: { type: String, enum: ['client', 'admin'], default: 'client' },
   city: { type: String, default: '' },
+  address: {
+    street: { type: String, default: '' },
+    city: { type: String, default: '' },
+    state: { type: String, default: '' },
+    pincode: { type: String, default: '' }
+  },
   isVerified: { type: Boolean, default: false },
   isExistingCustomer: { type: Boolean, default: false },
   otpCode: { type: String },

@@ -61,6 +61,11 @@ export function AuthProvider({ children }) {
     await authAPI.resendOTP({ email });
   };
 
+  const updateUser = (userData) => {
+    setUser(userData);
+    localStorage.setItem('ae_user', JSON.stringify(userData));
+  };
+
   const logout = () => {
     localStorage.removeItem('ae_token');
     localStorage.removeItem('ae_user');
@@ -68,7 +73,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, register, loginWithGoogle, verifyOTP, resendOTP, logout, loading, isAdmin: user?.role === 'admin', isExistingCustomer: user?.isExistingCustomer }}>
+    <AuthContext.Provider value={{ user, login, register, loginWithGoogle, verifyOTP, resendOTP, logout, updateUser, loading, isAdmin: user?.role === 'admin', isExistingCustomer: user?.isExistingCustomer }}>
       {children}
     </AuthContext.Provider>
   );

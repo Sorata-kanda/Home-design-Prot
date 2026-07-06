@@ -85,4 +85,21 @@ export const adminAPI = {
   seed: () => api.post('/admin/seed')
 };
 
+// Orders
+export const ordersAPI = {
+  simulatedCheckout: (data) => api.post('/orders/simulated-checkout', data),
+  getAll: () => api.get('/orders'),
+  getMine: () => api.get('/orders/mine'),
+  updateFulfillment: (id, status) => api.patch(`/orders/${id}/fulfillment`, { fulfillmentStatus: status }),
+};
+
+// Cart
+export const cartAPI = {
+  get: () => api.get('/cart'),
+  add: data => api.post('/cart/add', data),
+  remove: id => api.delete(`/cart/remove/${id}`),
+  update: (id, data) => api.patch(`/cart/update/${id}`, data),
+  clear: () => api.delete('/cart/clear')
+};
+
 export default api;

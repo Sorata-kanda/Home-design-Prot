@@ -20,12 +20,20 @@ export default function LoginPage() {
         });
         const btn = document.getElementById('google-signin-btn');
         if (btn) {
-          btn.innerHTML = '';
+          btn.innerHTML = ''; // Clear previous button if any
           window.google.accounts.id.renderButton(
             btn,
             { theme: 'outline', size: 'large', width: window.innerWidth < 400 ? 280 : 336, text: 'signin_with' }
           );
         }
+      }
+    };
+
+    const checkAndInit = () => {
+      if (window.google) {
+        initializeGoogleSignIn();
+      } else if (active) {
+        setTimeout(checkAndInit, 100);
       }
     };
 
@@ -35,10 +43,10 @@ export default function LoginPage() {
       script.src = 'https://accounts.google.com/gsi/client';
       script.async = true;
       script.defer = true;
-      script.onload = initializeGoogleSignIn;
+      script.onload = checkAndInit;
       document.body.appendChild(script);
     } else {
-      initializeGoogleSignIn();
+      checkAndInit();
     }
     return () => {
       active = false;

@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { Search, Wand2, ExternalLink } from 'lucide-react';
-import { productsAPI } from '../utils/api';
+import { Search, Wand2, ExternalLink, ShoppingCart } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { productsAPI, cartAPI } from '../utils/api';
 
 const CATEGORY_LABELS = {
   marble: 'Marble', gwalior_stone: 'Gwalior Stone', moca_crema: 'Moca Crema',
@@ -17,9 +18,25 @@ const GRADE_COLORS = {
 };
 
 export default function ProductsPage() {
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('all');
   const [grade, setGrade] = useState('all');
+
+  const addMutation = useMutation({
+    mutationFn: (productId) => cartAPI.add({ productId, quantity: 1, zone: 'General' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['cart']);
+      toast.success('Added to cart');
+    },
+    onError: (err) => {
+      if (err.response?.status === 401) {
+        toast.error('Please login to add items to your cart.');
+      } else {
+        toast.error(err.response?.data?.error || 'Failed to add to cart');
+      }
+    }
+  });
 
   const { data, isLoading } = useQuery({
     queryKey: ['products', category, grade, search],
@@ -116,9 +133,23 @@ export default function ProductsPage() {
                         Zones: {product.applicableZones.join(', ')}
                       </p>
                     )}
-                    <Link to="/visualizer" className="btn btn-secondary btn-sm" style={{ width:'100%', justifyContent:'center' }}>
-                      <Wand2 size={14} /> Try in visualizer
-                    </Link>
+                    <div style={{ display:'flex', gap:6 }}>
+                      <Link to="/visualizer" className="btn btn-secondary btn-sm" style={{ flex:1, justifyContent:'center' }}>
+                        <Wand2 size={14} /> Try in visualizer
+                      </Link>
+                      <button 
+                        className="btn btn-primary btn-sm" 
+                        title="Add to cart"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          addMutation.mutate(product._id);
+                        }}
+                        disabled={addMutation.isLoading}
+                      >
+                        <ShoppingCart size={14} />
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}

@@ -55,12 +55,14 @@ const generateLimiter = rateLimit({
 app.use("/api/visualizer/generate", generateLimiter);
 
 // Routes
-app.use("/api/auth", require("./routes/auth"));
-app.use("/api/products", require("./routes/products"));
-app.use("/api/visualizer", require("./routes/visualizer"));
-app.use("/api/renders", require("./routes/renders"));
-app.use("/api/quotes", require("./routes/quotes"));
-app.use("/api/admin", require("./routes/admin"));
+app.use('/api/auth', require('./routes/auth'));
+app.use('/api/products', require('./routes/products'));
+app.use('/api/renders', require('./routes/renders'));
+app.use('/api/quotes', require('./routes/quotes'));
+app.use('/api/admin', require('./routes/admin'));
+app.use('/api/visualizer', require('./routes/visualizer'));
+app.use('/api/orders', require('./routes/orders'));
+app.use('/api/cart', require('./routes/cart'));
 
 // Health check
 app.get("/health", (req, res) =>

@@ -50,16 +50,24 @@ export default function RegisterPage() {
       }
     };
 
+    const checkAndInit = () => {
+      if (window.google) {
+        initializeGoogleSignIn();
+      } else if (active && step === 'register') {
+        setTimeout(checkAndInit, 100);
+      }
+    };
+
     if (!document.getElementById('google-gsi-script')) {
       const script = document.createElement('script');
       script.id = 'google-gsi-script';
       script.src = 'https://accounts.google.com/gsi/client';
       script.async = true;
       script.defer = true;
-      script.onload = initializeGoogleSignIn;
+      script.onload = checkAndInit;
       document.body.appendChild(script);
     } else {
-      initializeGoogleSignIn();
+      checkAndInit();
     }
     return () => {
       active = false;

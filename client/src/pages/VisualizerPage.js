@@ -1,10 +1,11 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Upload, Camera, Wand2, Download, Share2, MessageSquare, X, ChevronLeft, Zap, Check, RefreshCw, Layers, Eye, EyeOff, Loader, Lock } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { visualizerAPI, productsAPI, rendersAPI } from '../utils/api';
+import { visualizerAPI, productsAPI, rendersAPI, cartAPI } from '../utils/api';
 import QuoteModal from '../components/visualizer/QuoteModal';
+import CheckoutModal from '../components/visualizer/CheckoutModal';
 import { useAuth } from '../context/AuthContext';
 
 const PRESETS = [
@@ -33,6 +34,7 @@ const ZONE_COLORS = {
 };
 
 export default function VisualizerPage() {
+  const queryClient = useQueryClient();
   const { isExistingCustomer } = useAuth();
   const [step, setStep] = useState(1); // 1=upload, 2=select, 3=result
   const [photo, setPhoto] = useState(null);
@@ -45,6 +47,7 @@ export default function VisualizerPage() {
   const [generating, setGenerating] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [showQuoteModal, setShowQuoteModal] = useState(false);
+  const [showCheckoutModal, setShowCheckoutModal] = useState(false);
   const [detectedZones, setDetectedZones] = useState([]); // Real zones from SegFormer
   const [segmenting, setSegmenting] = useState(false);
   const [showOverlay, setShowOverlay] = useState(true);
@@ -175,16 +178,7 @@ export default function VisualizerPage() {
     setDetectedZones([]); setActiveZone(null); setImageSize(null);
   };
 
-  const handleShare = () => {
-    if (!result?.shareToken) {
-      toast.error('Share link not available');
-      return;
-    }
-    const shareUrl = `${window.location.origin}/view/${result.shareToken}`;
-    navigator.clipboard.writeText(shareUrl)
-      .then(() => toast.success('Share link copied to clipboard!'))
-      .catch(() => toast.error('Failed to copy link'));
-  };
+
 
   // Get the zone that has a product applied
   const getZoneProduct = (zoneType) => {
@@ -627,6 +621,24 @@ export default function VisualizerPage() {
             <button className="btn btn-secondary" onClick={() => setShowQuoteModal(true)}>
               <MessageSquare size={16} /> Request quote
             </button>
+            <button 
+              className="btn btn-primary" 
+              onClick={() => {
+                if (selectedProducts.length === 0) {
+                  toast.error('Please select at least one material first.');
+                  return;
+                }
+                const promises = selectedProducts.map(p => 
+                  cartAPI.add({ productId: p.productId, quantity: 1, zone: p.zone })
+                );
+                Promise.all(promises).then(() => {
+                  queryClient.invalidateQueries(['cart']);
+                  toast.success('Materials added to cart!');
+                });
+              }}
+            >
+              <Zap size={16} /> Buy Now
+            </button>
           </div>
 
           {/* Applied products summary */}
@@ -649,9 +661,26 @@ export default function VisualizerPage() {
                   </div>
                 ))}
               </div>
-              <button onClick={() => setShowQuoteModal(true)} className="btn btn-primary" style={{ marginTop:'1rem' }}>
-                <MessageSquare size={16} /> Get a quote for these products
-              </button>
+              <div style={{ display:'flex', gap:'0.75rem', marginTop:'1rem' }}>
+                <button onClick={() => setShowQuoteModal(true)} className="btn btn-secondary" style={{ flex:1 }}>
+                  <MessageSquare size={16} /> Request bulk quote
+                </button>
+                <button 
+                  className="btn btn-primary" 
+                  style={{ flex:1 }}
+                  onClick={() => {
+                    const promises = selectedProducts.map(p => 
+                      cartAPI.add({ productId: p.productId, quantity: 1, zone: p.zone })
+                    );
+                    Promise.all(promises).then(() => {
+                      queryClient.invalidateQueries(['cart']);
+                      toast.success('Materials added to cart!');
+                    });
+                  }}
+                >
+                  <Zap size={16} /> Buy materials now
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -663,6 +692,15 @@ export default function VisualizerPage() {
           selectedProducts={selectedProducts}
           renderId={result?.renderId}
           onClose={() => setShowQuoteModal(false)}
+        />
+      )}
+
+      {/* Checkout modal */}
+      {showCheckoutModal && (
+        <CheckoutModal
+          selectedProducts={selectedProducts}
+          renderId={result?.renderId}
+          onClose={() => setShowCheckoutModal(false)}
         />
       )}
 

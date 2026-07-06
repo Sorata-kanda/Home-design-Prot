@@ -1,16 +1,29 @@
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Menu, X, Layers, LogOut, User, Settings } from 'lucide-react';
+import { Menu, X, Layers, LogOut, User, Settings, ShoppingCart } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../context/AuthContext';
+import { cartAPI } from '../../utils/api';
+import CartDrawer from './CartDrawer';
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
+  const [cartOpen, setCartOpen] = useState(false);
   const { user, logout, isAdmin } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const queryClient = useQueryClient();
+
+  const { data: cartData } = useQuery({
+    queryKey: ['cart'],
+    queryFn: () => cartAPI.get().then(r => r.data),
+    enabled: !!user // Only fetch if logged in
+  });
+  const cartItemCount = cartData?.cart?.items?.length || 0;
 
   const handleLogout = () => {
     logout();
+    queryClient.clear(); // Clear cached queries (like orders, renders, cart)
     navigate('/');
     setOpen(false);
   };
@@ -64,6 +77,25 @@ export default function Navbar() {
 
         {/* Auth area */}
         <div style={{ display:'flex', alignItems:'center', gap:'0.75rem' }}>
+          {user && (
+            <button 
+              className="btn btn-ghost btn-sm" 
+              onClick={() => setCartOpen(true)}
+              style={{ position:'relative', marginRight: '8px' }}
+            >
+              <ShoppingCart size={18} />
+              {cartItemCount > 0 && (
+                <span style={{
+                  position:'absolute', top:-4, right:-4, background:'red', color:'white',
+                  fontSize:'0.6rem', fontWeight:'bold', width:16, height:16, borderRadius:'50%',
+                  display:'flex', alignItems:'center', justifyContent:'center'
+                }}>
+                  {cartItemCount}
+                </span>
+              )}
+            </button>
+          )}
+
           {user ? (
             <div className="desktop-nav" style={{ display:'flex', alignItems:'center', gap:'0.75rem' }}>
               <Link to="/dashboard" className="btn btn-ghost btn-sm" style={{ display:'flex', alignItems:'center', gap:6 }}>
@@ -147,6 +179,8 @@ export default function Navbar() {
           #mobile-menu-btn { display: flex !important; }
         }
       `}</style>
+
+      <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} />
     </nav>
   );
 }

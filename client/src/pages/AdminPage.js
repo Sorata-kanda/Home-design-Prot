@@ -2,9 +2,9 @@ import { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { BarChart3, Package, Users, MessageSquare, Plus, Edit2, Trash2, Check, X, Upload, RefreshCw, TrendingUp, Clock } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { adminAPI, productsAPI, quotesAPI } from '../utils/api';
+import { adminAPI, productsAPI, quotesAPI, ordersAPI } from '../utils/api';
 
-const TABS = ['Dashboard', 'Products', 'Quotes', 'Users'];
+const TABS = ['Dashboard', 'Products', 'Quotes', 'Orders', 'Users'];
 const CATEGORIES = ['marble', 'gwalior_stone', 'moca_crema', 'white_stone', 'moulding', 'column', 'limestone', 'granite', 'other'];
 const CATEGORY_LABELS = {
   marble: 'Marble', gwalior_stone: 'Gwalior Stone', moca_crema: 'Moca Crema',
@@ -37,6 +37,7 @@ export default function AdminPage() {
   const { data: dashData } = useQuery({ queryKey: ['admin-dash'], queryFn: () => adminAPI.dashboard().then(r => r.data), enabled: tab === 'Dashboard' });
   const { data: productsData } = useQuery({ queryKey: ['admin-products'], queryFn: () => productsAPI.getAll({}).then(r => r.data), enabled: tab === 'Products' });
   const { data: quotesData } = useQuery({ queryKey: ['admin-quotes'], queryFn: () => quotesAPI.getAll({}).then(r => r.data), enabled: tab === 'Quotes' });
+  const { data: ordersData } = useQuery({ queryKey: ['admin-orders'], queryFn: () => ordersAPI.getAll().then(r => r.data), enabled: tab === 'Orders' });
   const { data: usersData } = useQuery({ queryKey: ['admin-users'], queryFn: () => adminAPI.users().then(r => r.data), enabled: tab === 'Users' });
 
   // Mutations
@@ -60,6 +61,11 @@ export default function AdminPage() {
   const quoteStatusMutation = useMutation({
     mutationFn: ({ id, status, adminNotes }) => quotesAPI.updateStatus(id, { status, adminNotes }),
     onSuccess: () => { toast.success('Status updated'); queryClient.invalidateQueries(['admin-quotes']); }
+  });
+
+  const fulfillmentMutation = useMutation({
+    mutationFn: ({ id, status }) => ordersAPI.updateFulfillment(id, status),
+    onSuccess: () => { toast.success('Order status updated'); queryClient.invalidateQueries(['admin-orders']); }
   });
 
   const handleEditProduct = (product) => {
@@ -294,6 +300,65 @@ export default function AdminPage() {
               ))}
               {quotesData?.quotes?.length === 0 && (
                 <div style={{ textAlign:'center', padding:'3rem', color:'var(--charcoal-light)' }}>No quote requests yet</div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ORDERS TAB */}
+        {tab === 'Orders' && (
+          <div>
+            <h3 style={{ marginBottom:'1.5rem' }}>E-Commerce Orders ({ordersData?.orders?.length || 0})</h3>
+            <div style={{ display:'grid', gap:'1rem' }}>
+              {ordersData?.orders?.map(order => (
+                <div key={order._id} className="card" style={{ padding:'1.25rem' }}>
+                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'0.875rem', flexWrap:'wrap', gap:'0.5rem' }}>
+                    <div>
+                      <p style={{ fontWeight:600, margin:0, color:'var(--charcoal)', fontSize:'1rem' }}>{order.contactName}</p>
+                      <p style={{ margin:'2px 0 0', fontSize:'0.875rem', color:'var(--charcoal-light)' }}>
+                        📱 {order.contactPhone} · {order.shippingAddress?.city}
+                      </p>
+                    </div>
+                    <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+                      <span style={{ fontWeight:700, color:'var(--gold-dark)', fontSize:'1.1rem' }}>₹{order.totalAmount.toLocaleString('en-IN')}</span>
+                      <span className={`badge ${order.paymentStatus === 'paid' ? 'badge-success' : 'badge-stone'}`}>{order.paymentStatus}</span>
+                    </div>
+                  </div>
+
+                  <div style={{ marginBottom:'0.875rem', fontSize:'0.8125rem', color:'var(--charcoal-light)', background:'var(--cream)', padding:'0.75rem', borderRadius:8 }}>
+                    <strong>Shipping Address:</strong> {order.shippingAddress?.street}, {order.shippingAddress?.city}, {order.shippingAddress?.state}, {order.shippingAddress?.pincode}
+                  </div>
+
+                  {order.lineItems?.length > 0 && (
+                    <div style={{ marginBottom:'0.875rem' }}>
+                      {order.lineItems.map((item, i) => (
+                        <span key={i} style={{ display:'inline-block', padding:'0.2rem 0.625rem', background:'var(--cream)', borderRadius:20, fontSize:'0.75rem', color:'var(--charcoal-light)', marginRight:6, marginBottom:4 }}>
+                          {item.productName} ({item.zone}, {item.estimatedArea} sq.ft)
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  <div style={{ fontSize:'0.75rem', color:'var(--charcoal-light)', marginBottom:'0.5rem' }}>
+                    <Clock size={11} style={{ verticalAlign:'middle' }} /> {new Date(order.createdAt).toLocaleDateString('en-IN')}
+                    {' · TXN: '}{order.transactionId || 'N/A'}
+                  </div>
+                  
+                  {/* Fulfillment toggles */}
+                  <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap', marginTop:'1rem', paddingTop:'1rem', borderTop:'1px solid var(--border)' }}>
+                    <span style={{ fontSize:'0.8125rem', fontWeight:500, color:'var(--charcoal)' }}>Fulfillment Status:</span>
+                    {['processing', 'shipped', 'delivered', 'cancelled'].map(s => (
+                      <button key={s} onClick={() => fulfillmentMutation.mutate({ id: order._id, status: s })}
+                        className="btn btn-sm"
+                        style={{ background: order.fulfillmentStatus === s ? 'var(--gold)' : 'transparent', color: order.fulfillmentStatus === s ? 'white' : 'var(--charcoal)', border: order.fulfillmentStatus === s ? 'none' : '1px solid var(--border)', padding:'0.2rem 0.5rem', fontSize:'0.6875rem' }}>
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+              {ordersData?.orders?.length === 0 && (
+                <div style={{ textAlign:'center', padding:'3rem', color:'var(--charcoal-light)' }}>No e-commerce orders yet</div>
               )}
             </div>
           </div>

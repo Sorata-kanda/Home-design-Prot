@@ -30,7 +30,9 @@ function AppRoutes() {
       <Navbar />
       <Routes>
         <Route path="/" element={<HomePage />} />
-        <Route path="/visualizer" element={<VisualizerPage />} />
+        <Route path="/visualizer" element={
+          <ProtectedRoute><VisualizerPage /></ProtectedRoute>
+        } />
         <Route path="/products" element={<ProductsPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
