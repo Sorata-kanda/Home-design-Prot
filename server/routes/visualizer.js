@@ -201,18 +201,26 @@ async function generateWithLocalSD(photoUrl, photoPublicId, appliedProducts = []
   };
 }
 
-/**
- * Extract Cloudinary public ID from a Cloudinary URL
- */
-function extractPublicId(url) {
-  if (!url || !url.includes('cloudinary.com')) return null;
+// Helper: Call Stability AI or Replicate for img2img
+async function generateVisualization(imageUrl, prompt, negativePrompt) {
+  const stabilityKey = process.env.STABILITY_API_KEY;
+  const replicateToken = process.env.REPLICATE_API_TOKEN;
+  
+  const hasStability = stabilityKey && stabilityKey !== 'your_stability_ai_key' && stabilityKey.trim() !== '';
+  const hasReplicate = replicateToken && replicateToken !== 'your_replicate_token' && replicateToken.trim() !== '';
 
   try {
-    // Pattern: .../upload/v1234567890/folder/filename.ext
-    const match = url.match(/\/upload\/(?:v\d+\/)?(.+?)(?:\.\w+)?$/);
-    return match ? match[1] : null;
-  } catch {
-    return null;
+    if (hasStability) {
+      return await callStabilityAI(imageUrl, prompt, negativePrompt);
+    } else if (hasReplicate) {
+      return await callReplicate(imageUrl, prompt, negativePrompt);
+    } else {
+      // Demo mode: return original image with demo watermark
+      console.warn('No AI API key configured, returning demo response');
+      return { renderedUrl: imageUrl, renderedPublicId: null };
+    }
+  } catch (err) {
+    throw new Error(`AI generation failed: ${err.message}`);
   }
 }
 
@@ -222,25 +230,29 @@ function extractPublicId(url) {
 // ═══════════════════════════════════════════════════════════════════════════
 
 async function callStabilityAI(imageUrl, prompt, negativePrompt) {
+  // Download the init_image as an arraybuffer
+  const imgResponse = await axios.get(imageUrl, { responseType: 'arraybuffer' });
+  const blob = new Blob([imgResponse.data], { type: 'image/png' });
+
+  const formData = new FormData();
+  formData.append('init_image', blob, 'init_image.png');
+  formData.append('image_strength', '0.35');
+  formData.append('text_prompts[0][text]', prompt);
+  formData.append('text_prompts[0][weight]', '1');
+  formData.append('text_prompts[1][text]', negativePrompt);
+  formData.append('text_prompts[1][weight]', '-1');
+  formData.append('cfg_scale', '8');
+  formData.append('steps', '50');
+  formData.append('samples', '1');
+  formData.append('style_preset', 'photographic');
+
   const response = await axios.post(
     'https://api.stability.ai/v1/generation/stable-diffusion-xl-1024-v1-0/image-to-image',
-    {
-      init_image: imageUrl,
-      image_strength: 0.35,
-      text_prompts: [
-        { text: prompt, weight: 1 },
-        { text: negativePrompt, weight: -1 }
-      ],
-      cfg_scale: 8,
-      steps: 50,
-      samples: 1,
-      style_preset: 'photographic'
-    },
+    formData,
     {
       headers: {
         Authorization: `Bearer ${process.env.STABILITY_API_KEY}`,
-        Accept: 'application/json',
-        'Content-Type': 'application/json'
+        Accept: 'application/json'
       }
     }
   );
@@ -276,13 +288,15 @@ async function callReplicate(imageUrl, prompt, negativePrompt) {
   });
 
   let result = prediction.data;
-  while (result.status !== 'succeeded' && result.status !== 'failed') {
+  while (result.status !== 'succeeded' && result.status !== 'failed' && result.status !== 'canceled') {
     await new Promise(r => setTimeout(r, 1500));
     const poll = await axios_replicate.get(`https://api.replicate.com/v1/predictions/${result.id}`);
     result = poll.data;
   }
 
-  if (result.status === 'failed') throw new Error('Replicate generation failed');
+  if (result.status === 'failed' || result.status === 'canceled') {
+    throw new Error(`Replicate generation ${result.status}`);
+  }
 
   const renderedUrl = result.output[0];
   const uploaded = await cloudinary.uploader.upload(renderedUrl, {
@@ -292,75 +306,11 @@ async function callReplicate(imageUrl, prompt, negativePrompt) {
   return { renderedUrl: uploaded.secure_url, renderedPublicId: uploaded.public_id };
 }
 
-
-// ═══════════════════════════════════════════════════════════════════════════
-// Helpers
-// ═══════════════════════════════════════════════════════════════════════════
-
-/**
- * Build AI prompt from selected products (used by Stability/Replicate fallbacks)
- */
-async function buildProductPrompt(appliedProducts = [], preset = null) {
-  const productMap = {};
-  const productIds = appliedProducts.map(p => p.productId).filter(Boolean);
-
-  if (productIds.length) {
-    const products = await Product.find({ _id: { $in: productIds } }).lean();
-    products.forEach(p => { productMap[p._id.toString()] = p; });
-  }
-
-  const materialDescriptions = appliedProducts.map(ap => {
-    const product = productMap[ap.productId];
-    if (!product) return '';
-
-    const finishDesc = {
-      polished: 'highly polished with mirror-like reflections',
-      honed: 'matte honed finish with subtle texture',
-      brushed: 'brushed surface with linear texture',
-      antique: 'aged antique finish with character',
-      natural: 'natural split-face texture',
-      flamed: 'rough flamed texture'
-    }[product.finish] || 'polished';
-
-    return `${ap.zone} covered with ${product.name} ${product.category.replace('_', ' ')} stone, ${finishDesc}, photorealistic material, proper perspective and lighting`;
-  }).filter(Boolean);
-
-  let presetDesc = '';
-  if (preset === 'ionic_columns') {
-    presetDesc = 'Add grand Ionic marble columns on sides, neoclassical architecture style';
-  } else if (preset === 'cornice') {
-    presetDesc = 'Add ornate white stone cornice moulding along ceiling edges';
-  } else if (preset === 'wainscoting') {
-    presetDesc = 'Add Gwalior stone wainscoting panels on lower wall section, traditional style';
-  } else if (preset === 'full_neoclassical') {
-    presetDesc = 'Transform to full neoclassical Indian interior with marble floors, white columns, ornate cornices';
-  }
-
-  const prompt = [
-    'Interior design visualization, photorealistic render, 8K quality,',
-    'Indian home interior, warm natural lighting,',
-    ...materialDescriptions,
-    presetDesc,
-    'professional architectural photography, high detail, accurate material textures,',
-    'maintain room proportions and existing furniture, realistic shadows and reflections'
-  ].filter(Boolean).join(', ');
-
-  const negativePrompt = [
-    'distorted proportions, unrealistic materials, cartoon, illustration,',
-    'blurry, low quality, dark, overexposed, missing walls, floating objects,',
-    'changed room layout, removed doors or windows, wrong perspective'
-  ].join(' ');
-
-  return {
-    prompt,
-    negativePrompt,
-    appliedProducts: appliedProducts.map(ap => ({
-      product: ap.productId,
-      productName: productMap[ap.productId]?.name || '',
-      zone: ap.zone,
-      coverage: ap.coverage || 0
-    }))
-  };
+// Helper: Add watermark via Cloudinary transformation
+function addWatermark(imageUrl) {
+  if (!imageUrl.includes('cloudinary.com')) return imageUrl;
+  const watermarkText = encodeURIComponent(process.env.WATERMARK_TEXT || 'Arteffects');
+  return imageUrl.replace('/upload/', `/upload/l_text:Arial_32_bold:${watermarkText},co_white,o_60,g_south_east,x_20,y_20/`);
 }
 
 /**

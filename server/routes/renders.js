@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const axios = require('axios');
 const Render = require('../models/Render');
 const { protect } = require('../middleware/auth');
 const { v4: uuidv4 } = require('uuid');
@@ -56,6 +57,32 @@ router.get('/shared/:token', async (req, res) => {
     res.json({ render });
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/renders/download — proxy download to bypass CORS (public)
+router.get('/download', async (req, res) => {
+  try {
+    const { url } = req.query;
+    if (!url) return res.status(400).json({ error: 'URL is required' });
+
+    // SSRF Validation: Only allow streaming from Cloudinary
+    if (!url.startsWith('https://res.cloudinary.com/')) {
+      return res.status(400).json({ error: 'Invalid download source domain' });
+    }
+
+    const response = await axios({
+      method: 'get',
+      url,
+      responseType: 'stream'
+    });
+
+    res.setHeader('Content-Disposition', 'attachment; filename="arteffects-visualization.jpg"');
+    res.setHeader('Content-Type', response.headers['content-type'] || 'image/jpeg');
+
+    response.data.pipe(res);
+  } catch (err) {
+    res.status(500).json({ error: 'Download failed' });
   }
 });
 
