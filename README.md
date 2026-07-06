@@ -1,6 +1,6 @@
-# Arteffects AI Visualizer
+# Stratum AI Room Visualizer for DSYN Luxury
 
-AI-powered room visualizer for the Arteffects stone & moulding website. Lets clients upload room photos and instantly see Arteffects products (marble, Gwalior stone, Moca Crema, columns, mouldings) applied to their space.
+AI-powered room visualizer for the DSYN Luxury stone & moulding website. Lets clients upload room photos and instantly see DSYN Luxury products (marble, Gwalior stone, Moca Crema, columns, mouldings) applied to their space.
 
 ---
 
@@ -10,7 +10,7 @@ AI-powered room visualizer for the Arteffects stone & moulding website. Lets cli
 |-------|------|
 | Frontend | React 18, React Router v6, TanStack Query, Lucide icons |
 | Backend | Node.js + Express |
-| Database | MongoDB + Mongoose |
+| Database | MongoDB + Mongoose (Optimized with `.lean()` & pagination) |
 | Image storage | Cloudinary |
 | Local AI & Mapping | FastAPI, PyTorch, SegFormer, OpenCV (LAB Color Space) |
 | Authentication | Google OAuth 2.0 & JWT with Resend Email OTP |
@@ -20,7 +20,7 @@ AI-powered room visualizer for the Arteffects stone & moulding website. Lets cli
 ## Project Structure
 
 ```
-arteffects/
+dsyn-stratum/
 ├── server/                 # Express backend
 │   ├── index.js            # Entry point, middleware
 │   ├── models/
@@ -35,6 +35,7 @@ arteffects/
 │   │   ├── renders.js      # Save, share renders
 │   │   ├── quotes.js       # Quote submission + CRM
 │   │   └── admin.js        # Dashboard, stats, seed
+│   ├── segment_api.py      # Python AI Microservice (FastAPI)
 │   └── middleware/
 │       ├── auth.js         # JWT protect, adminOnly
 │       └── upload.js       # Cloudinary + multer
@@ -81,13 +82,25 @@ cp .env.example .env
 Fill in `.env`:
 
 ```
-MONGODB_URI=mongodb://localhost:27017/arteffects
-JWT_SECRET=your_random_secret_32_chars_min
+PORT=5000
+CLIENT_URL=http://localhost:3000
+MONGODB_URI=mongodb://localhost:27017/dsyn
 
-# Cloudinary — create free account at cloudinary.com
+# JWT
+JWT_SECRET=your_random_secret_32_chars_min
+JWT_EXPIRES_IN=7d
+
+# Cloudinary
 CLOUDINARY_CLOUD_NAME=xxx
 CLOUDINARY_API_KEY=xxx
 CLOUDINARY_API_SECRET=xxx
+
+# Admin Credentials
+ADMIN_EMAIL=admin@dsyn.com
+ADMIN_PASSWORD=your_password
+
+# Watermark text
+WATERMARK_TEXT=DSYN
 
 # Google OAuth Credentials
 GOOGLE_CLIENT_ID=your_google_client_id_here.apps.googleusercontent.com
@@ -95,10 +108,12 @@ GOOGLE_CLIENT_ID=your_google_client_id_here.apps.googleusercontent.com
 # Resend API Key for Email OTP Verification
 RESEND_API_KEY=re_your_api_key_here
 
+# AI Fallback Rendering APIs (Required for full pipeline)
+STABILITY_API_KEY=your_stability_key_here
+REPLICATE_API_TOKEN=your_replicate_token_here
+
 # Python microservice connection URL
 PYTHON_API_URL=http://localhost:8000
-
-CLIENT_URL=http://localhost:3000
 ```
 
 ### 3. Create first admin account
@@ -111,7 +126,7 @@ const mongoose = require('mongoose');
 const User = require('./models/User');
 require('dotenv').config();
 mongoose.connect(process.env.MONGODB_URI).then(async () => {
-  await User.create({ name: 'Joe Arteffects', email: 'admin@arteffects.in', password: 'ArtEffects@2024', role: 'admin' });
+  await User.create({ name: 'Admin', email: process.env.ADMIN_EMAIL, password: process.env.ADMIN_PASSWORD, role: 'admin' });
   console.log('Admin created');
   process.exit();
 });
@@ -135,6 +150,8 @@ First, start the Python FastAPI AI microservice:
 cd server
 # Activate your virtual environment:
 .\venv\Scripts\Activate.ps1
+# Install requirements
+pip install -r requirements.txt
 # Start the server:
 python segment_api.py
 ```
@@ -153,18 +170,19 @@ npm run dev
 
 ## AI & Texture Mapping Pipeline
 
-The visualizer uses a hybrid **SegFormer (Ade20k) + OpenCV LAB Color Space** mapping pipeline to apply product textures realistically in under 20 milliseconds:
+The visualizer uses a highly optimized hybrid **SegFormer (Ade20k) + OpenCV LAB Color Space** mapping pipeline to apply product textures realistically in O(1) inference time:
 
 ### 1. SegFormer Segmentation
-* Pre-loaded in the FastAPI service (`segment_api.py`).
-* Detects room components (walls, floors, ceiling, pillars) from the uploaded room image.
+* Pre-loaded globally in the FastAPI service (`segment_api.py`).
+* Model runs in `.half()` precision on CUDA for 50% VRAM reduction.
+* Runs **once** globally per base image to map all room components (walls, floors, ceiling, pillars), rather than re-running per applied material.
 
 ### 2. OpenCV LAB Color Space Mapping
-* Takes the product's actual Cloudinary SKU texture image.
+* Takes the product's Cloudinary SKU texture image (utilizes local temp caching to avoid redundant downloads).
 * Converts both the original room photo (cropped to mask bounding box) and the tiled texture to the **LAB Color Space** to isolate lightness (`L`).
 * Calculates a dynamic `lighting_ratio` map from the original wall's lighting patterns.
 * Multiplies the product texture's `L` channel by this ratio, perfectly projecting original highlights, shadows, and ambient occlusion onto the new texture.
-* Blends the mapped result back onto the original photo, maintaining 100% SKU visual accuracy.
+* Aggressive `gc.collect()` prevents memory leaks from massive NumPy tile arrays.
 
 ---
 
@@ -174,19 +192,19 @@ The visualizer uses a hybrid **SegFormer (Ade20k) + OpenCV LAB Color Space** map
 1. **Upload** — drop or tap to upload room photo (JPG/PNG, up to 15MB)
 2. **Select** — choose zone (floor/wall/ceiling/pillar/etc.) then product from live inventory
 3. **Presets** — one-click neoclassical transformations: Ionic columns, cornice, wainscoting
-4. **Generate** — AI applies materials in 10–15 seconds
-5. **Download** — HD watermarked render with Arteffects branding
+4. **Generate** — AI applies materials in seconds
+5. **Download** — HD watermarked render with DSYN Luxury branding
 6. **Quote** — pre-filled quote form with selected SKUs, area estimator, total
 
 ### Admin Panel (`/admin`)
-- Dashboard with stats (users, products, renders, new quotes)
+- Dashboard with stats (users, products, renders, new quotes). Queries optimized with `.lean()`.
 - Add / edit / remove products with texture upload
 - Full quote CRM: new → contacted → quoted → won / lost
-- User management
+- User management (Paginated)
 - One-click sample data seed
 
 ### Render Persistence
-- Renders saved to MongoDB for **30 days** (TTL index)
+- Renders saved to MongoDB for **30 days** (TTL index auto-cleanup)
 - Logged-in users see full history at `/dashboard`
 - Shareable public links (`/view/:token`) for WhatsApp sharing
 
@@ -194,7 +212,7 @@ The visualizer uses a hybrid **SegFormer (Ade20k) + OpenCV LAB Color Space** map
 
 ## API Endpoints
 
-### Public
+### Public (Node.js Backend)
 ```
 GET  /api/products          List products (filter: category, grade, zone)
 GET  /api/products/:id      Product detail
@@ -207,7 +225,7 @@ GET  /api/renders/shared/:token  Public render view
 POST /api/quotes            Submit quote (no auth required)
 ```
 
-### Authenticated
+### Authenticated (Node.js Backend)
 ```
 GET  /api/auth/me           Current user
 GET  /api/renders           My renders
@@ -215,7 +233,7 @@ POST /api/visualizer/upload Upload room photo
 POST /api/visualizer/generate  Generate visualization
 ```
 
-### Admin only
+### Admin only (Node.js Backend)
 ```
 GET  /api/admin/dashboard   Stats
 POST /api/products          Create product
@@ -223,6 +241,13 @@ PATCH /api/products/:id     Update product
 DELETE /api/products/:id    Soft-delete
 GET  /api/quotes            All quotes
 PATCH /api/quotes/:id/status  Update quote status
+```
+
+### Python AI Microservice (FastAPI)
+Runs locally on `http://localhost:8000` (or `PYTHON_API_URL`):
+```
+POST /segment               Accepts photo URL. Returns Ade20k semantic segmentation masks & room coverage data.
+POST /generate              Accepts photo URL and array of applied zones & textures. Returns finalized rendered image.
 ```
 
 ---
@@ -246,16 +271,17 @@ Set `CLIENT_URL=https://your-frontend-domain.com` on server.
 
 ### MongoDB
 - Local MongoDB or MongoDB Atlas (free tier works fine)
-- Atlas connection string: `mongodb+srv://user:pass@cluster.mongodb.net/arteffects`
+- Atlas connection string: `mongodb+srv://user:pass@cluster.mongodb.net/dsyn`
 
 ---
 
 ## Mobile Optimization
 
 The UI is fully mobile-first:
+- Native page scrolling restored for material selection process
 - Dropzone supports tap-to-upload on iOS/Android
 - Sticky product selector panel collapses on mobile
-- WhatsApp-friendly share links
+- WhatsApp-friendly share links with responsive stacked "Before & After" layouts
 - PWA-ready meta tags
 
 ---
