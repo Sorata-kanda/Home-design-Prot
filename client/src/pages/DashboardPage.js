@@ -101,7 +101,7 @@ export default function DashboardPage() {
 
                   {/* Actions */}
                   <div style={{ display:'flex', gap:6 }}>
-                    <a href={render.renderedPhoto?.url} download className="btn btn-secondary btn-sm" style={{ flex:1, justifyContent:'center' }}>
+                    <a href={render.watermarkedUrl || render.renderedPhoto?.url} download="arteffects-visualization.jpg" target="_blank" rel="noopener noreferrer" className="btn btn-secondary btn-sm" style={{ flex:1, justifyContent:'center' }}>
                       Download
                     </a>
                     <button onClick={() => shareMutation.mutate(render._id)} className="btn btn-ghost btn-sm" title="Share">

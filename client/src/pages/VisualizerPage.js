@@ -1,10 +1,11 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { useQuery } from '@tanstack/react-query';
-import { Upload, Camera, Wand2, Download, Share2, MessageSquare, X, ChevronLeft, Zap, Check, RefreshCw, Layers, Eye, EyeOff, Loader } from 'lucide-react';
+import { Upload, Camera, Wand2, Download, Share2, MessageSquare, X, ChevronLeft, Zap, Check, RefreshCw, Layers, Eye, EyeOff, Loader, Lock } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { visualizerAPI, productsAPI } from '../utils/api';
 import QuoteModal from '../components/visualizer/QuoteModal';
+import { useAuth } from '../context/AuthContext';
 
 const PRESETS = [
   { id: 'ionic_columns', label: 'Ionic Columns', desc: 'Grand entrance columns', icon: '🏛️' },
@@ -21,17 +22,18 @@ const CATEGORY_LABELS = {
 
 // Color map for zone overlay visualization
 const ZONE_COLORS = {
-  wall:     { bg: 'rgba(60, 160, 60, 0.25)',  border: '#3CA03C', label: '🧱 Wall' },
-  floor:    { bg: 'rgba(40, 90, 210, 0.25)',   border: '#285AD2', label: '🏠 Floor' },
-  ceiling:  { bg: 'rgba(160, 100, 40, 0.25)',  border: '#A06428', label: '⬆️ Ceiling' },
-  window:   { bg: 'rgba(200, 200, 60, 0.25)',  border: '#C8C83C', label: '🪟 Window' },
-  door:     { bg: 'rgba(200, 130, 60, 0.25)',  border: '#C8823C', label: '🚪 Door' },
-  column:   { bg: 'rgba(0, 220, 220, 0.25)',   border: '#00DCDC', label: '🏛️ Column' },
-  stairs:   { bg: 'rgba(180, 60, 180, 0.25)',  border: '#B43CB4', label: '🪜 Stairs' },
-  pillar:   { bg: 'rgba(0, 220, 220, 0.25)',   border: '#00DCDC', label: '🏛️ Pillar' },
+  wall:     { bg: 'rgba(201, 168, 76, 0.15)',  border: 'var(--gold)', label: 'Wall' },
+  floor:    { bg: 'rgba(139, 115, 85, 0.12)',  border: 'var(--stone)', label: 'Floor' },
+  ceiling:  { bg: 'rgba(44, 36, 32, 0.08)',    border: 'var(--charcoal-light)', label: 'Ceiling' },
+  window:   { bg: 'rgba(44, 36, 32, 0.08)',    border: 'var(--charcoal-light)', label: 'Window' },
+  door:     { bg: 'rgba(139, 115, 85, 0.12)',  border: 'var(--stone)', label: 'Door' },
+  column:   { bg: 'rgba(201, 168, 76, 0.15)',  border: 'var(--gold)', label: 'Column' },
+  stairs:   { bg: 'rgba(139, 115, 85, 0.12)',  border: 'var(--stone)', label: 'Stairs' },
+  pillar:   { bg: 'rgba(201, 168, 76, 0.15)',  border: 'var(--gold)', label: 'Pillar' },
 };
 
 export default function VisualizerPage() {
+  const { isExistingCustomer } = useAuth();
   const [step, setStep] = useState(1); // 1=upload, 2=select, 3=result
   const [photo, setPhoto] = useState(null);
   const [uploadedPhoto, setUploadedPhoto] = useState(null);
@@ -190,9 +192,15 @@ export default function VisualizerPage() {
   };
 
   return (
-    <div style={{ minHeight:'calc(100vh - 64px)', background:'var(--cream)' }}>
+    <div style={{ 
+      display: 'flex', flexDirection: 'column', 
+      minHeight:'calc(100vh - 64px)', 
+      height: step === 2 ? 'calc(100vh - 64px)' : 'auto',
+      background:'var(--cream)', 
+      overflow: step === 2 ? 'hidden' : 'auto' 
+    }}>
       {/* Progress bar */}
-      <div style={{ background:'var(--warm-white)', borderBottom:'1px solid var(--border)', padding:'0.75rem 0' }}>
+      <div style={{ flexShrink: 0, background:'var(--warm-white)', borderBottom:'1px solid var(--border)', padding:'0.75rem 0' }}>
         <div className="container">
           <div style={{ display:'flex', alignItems:'center', gap:'1rem' }}>
             {[
@@ -300,24 +308,32 @@ export default function VisualizerPage() {
                           display:'flex', alignItems:'center', gap:6,
                           pointerEvents:'auto', cursor:'pointer',
                           padding:'6px 12px', borderRadius:8,
-                          background: isActive ? colors.border : 'rgba(0,0,0,0.55)',
-                          border: `2px solid ${isActive ? 'white' : colors.border}`,
-                          backdropFilter:'blur(6px)',
+                          background: isActive ? 'var(--gold)' : 'rgba(255, 255, 255, 0.9)',
+                          border: `2px solid ${isActive ? 'white' : 'transparent'}`,
+                          backdropFilter:'blur(4px)',
                           transition:'all 0.2s',
                           transform: isActive ? 'scale(1.05)' : 'scale(1)',
-                          boxShadow: isActive ? `0 0 12px ${colors.border}` : 'none',
+                          boxShadow: isActive ? `0 0 16px rgba(201, 168, 76, 0.6)` : '0 4px 12px rgba(0,0,0,0.1)',
                           whiteSpace: 'nowrap'
                         }}
                         onClick={() => setActiveZone(zone.type)}
                       >
-                        <span style={{ fontSize:'0.75rem', color:'white', fontWeight:600, textTransform:'uppercase', letterSpacing:0.5 }}>
+                        <span style={{ 
+                          fontSize:'0.75rem', 
+                          color: isActive ? 'white' : 'var(--charcoal)', 
+                          fontWeight:600, textTransform:'uppercase', letterSpacing:0.5 
+                        }}>
                           {colors.label || zone.type}
                         </span>
-                        <span style={{ fontSize:'0.6875rem', color:'rgba(255,255,255,0.8)', fontWeight:500 }}>
+                        <span style={{ 
+                          fontSize:'0.6875rem', 
+                          color: isActive ? 'rgba(255,255,255,0.9)' : 'var(--charcoal-light)', 
+                          fontWeight:500 
+                        }}>
                           {zone.coveragePct}%
                         </span>
                         {hasProduct && (
-                          <Check size={12} color="#4ade80" strokeWidth={3} />
+                          <Check size={12} color={isActive ? "white" : "var(--gold)"} strokeWidth={3} />
                         )}
                       </div>
                     );
@@ -326,40 +342,22 @@ export default function VisualizerPage() {
               )}
             </div>
 
-            {/* Bottom bar: overlay toggle + applied materials */}
-            <div style={{
-              background:'rgba(44,36,32,0.95)', backdropFilter:'blur(8px)',
-              padding:'0.75rem 1rem', borderTop:'1px solid rgba(255,255,255,0.1)'
-            }}>
-              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom: selectedProducts.length > 0 ? 8 : 0 }}>
-                <button
-                  onClick={() => setShowOverlay(!showOverlay)}
-                  style={{
-                    display:'flex', alignItems:'center', gap:6,
-                    background:'none', border:'1px solid rgba(255,255,255,0.2)',
-                    borderRadius:6, padding:'4px 10px', cursor:'pointer', color:'rgba(255,255,255,0.8)',
-                    fontSize:'0.75rem'
-                  }}
-                >
-                  {showOverlay ? <Eye size={14} /> : <EyeOff size={14} />}
-                  {showOverlay ? 'Hide zones' : 'Show zones'}
-                </button>
+            {/* Bottom bar: applied materials */}
+            {(selectedProducts.length > 0 || segmenting) && (
+              <div style={{
+                background:'rgba(44,36,32,0.95)', backdropFilter:'blur(8px)',
+                padding:'0.75rem 1rem', borderTop:'1px solid rgba(255,255,255,0.1)'
+              }}>
                 {segmenting && (
-                  <span style={{ fontSize:'0.75rem', color:'var(--gold)', display:'flex', alignItems:'center', gap:4 }}>
-                    <Loader size={12} style={{ animation:'spin 1.5s linear infinite' }} /> Segmenting…
-                  </span>
+                  <div style={{ display:'flex', alignItems:'center', justifyContent:'flex-end', marginBottom: selectedProducts.length > 0 ? 8 : 0 }}>
+                    <span style={{ fontSize:'0.75rem', color:'var(--gold)', display:'flex', alignItems:'center', gap:4 }}>
+                      <Loader size={12} style={{ animation:'spin 1.5s linear infinite' }} /> Segmenting…
+                    </span>
+                  </div>
                 )}
-                {!segmenting && detectedZones.length > 0 && (
-                  <span style={{ fontSize:'0.75rem', color:'rgba(255,255,255,0.5)' }}>
-                    {detectedZones.length} zone{detectedZones.length > 1 ? 's' : ''} detected by AI
-                  </span>
-                )}
-              </div>
-
-              {selectedProducts.length > 0 && (
-                <>
-                  <p style={{ color:'white', fontSize:'0.8125rem', fontWeight:500, margin:'0 0 0.5rem' }}>Applied materials</p>
-                  <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
+                {selectedProducts.length > 0 && (
+                  <div style={{ display:'flex', alignItems:'center', flexWrap:'wrap', gap:8 }}>
+                    <span style={{ color:'white', fontSize:'0.8125rem', fontWeight:500, marginRight:'0.5rem' }}>Applied Materials:</span>
                     {selectedProducts.map((p, i) => (
                       <span key={i} style={{
                         padding:'0.25rem 0.625rem', background:'rgba(201,168,76,0.25)',
@@ -376,20 +374,20 @@ export default function VisualizerPage() {
                       </span>
                     ))}
                   </div>
-                </>
-              )}
-            </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Right: Product selector panel */}
           <div className="visualizer-right-panel">
-            <div style={{ padding:'1.25rem', borderBottom:'1px solid var(--border)', position:'sticky', top:0, background:'var(--warm-white)', zIndex:10 }}>
+            <div style={{ padding:'1.25rem', borderBottom:'1px solid var(--border-strong)', position:'sticky', top:0, background:'var(--warm-white)', zIndex:10 }}>
               <h3 style={{ marginBottom:4, fontSize:'1.1rem' }}>Choose materials</h3>
               <p style={{ fontSize:'0.8125rem', margin:0 }}>Select a zone on the photo, then pick a product texture</p>
             </div>
 
             {/* Zone selector — real detected zones */}
-            <div style={{ padding:'1rem 1.25rem', borderBottom:'1px solid var(--border)' }}>
+            <div style={{ padding:'1rem 1.25rem', borderBottom:'1px solid var(--border-strong)', background:'var(--cream)' }}>
               <label style={{ marginBottom:'0.5rem', display:'flex', alignItems:'center', gap:6 }}>
                 <Layers size={14} /> Apply to zone
                 {segmenting && <Loader size={12} style={{ animation:'spin 1.5s linear infinite', marginLeft:4 }} />}
@@ -432,27 +430,8 @@ export default function VisualizerPage() {
               )}
             </div>
 
-            {/* Neoclassical presets */}
-            <div style={{ padding:'1rem 1.25rem', borderBottom:'1px solid var(--border)' }}>
-              <label style={{ marginBottom:'0.5rem' }}>One-click neoclassical presets</label>
-              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
-                {PRESETS.map(p => (
-                  <button key={p.id} onClick={() => setActivePreset(activePreset === p.id ? null : p.id)}
-                    style={{
-                      padding:'0.75rem', border:`1px solid ${activePreset === p.id ? 'var(--gold)' : 'var(--border)'}`,
-                      borderRadius:10, background: activePreset === p.id ? 'rgba(201,168,76,0.1)' : 'transparent',
-                      cursor:'pointer', textAlign:'left', transition:'all 0.15s'
-                    }}>
-                    <div style={{ fontSize:'1.25rem', marginBottom:4 }}>{p.icon}</div>
-                    <div style={{ fontWeight:500, fontSize:'0.8125rem', color:'var(--charcoal)', fontFamily:'var(--font-body)' }}>{p.label}</div>
-                    <div style={{ fontSize:'0.75rem', color:'var(--charcoal-light)', fontFamily:'var(--font-body)' }}>{p.desc}</div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
             {/* Category filter */}
-            <div style={{ padding:'0.75rem 1.25rem', borderBottom:'1px solid var(--border)', overflowX:'auto' }}>
+            <div style={{ padding:'0.75rem 1.25rem', borderBottom:'1px solid var(--border-strong)', overflowX:'auto', background:'var(--warm-white)' }}>
               <div style={{ display:'flex', gap:6, minWidth:'max-content' }}>
                 {categories.filter(c => c === 'all' || products.some(p => p.category === c)).map(cat => (
                   <button key={cat} onClick={() => setActiveCategory(cat)}
@@ -464,7 +443,7 @@ export default function VisualizerPage() {
             </div>
 
             {/* Product grid */}
-            <div style={{ padding:'1rem 1.25rem' }}>
+            <div style={{ padding:'1rem 1.25rem', borderBottom:'1px solid var(--border-strong)', background:'var(--cream)' }}>
               {!activeZone && detectedZones.length > 0 && (
                 <div style={{ padding:'1rem', background:'rgba(201,168,76,0.08)', borderRadius:10, marginBottom:'1rem', fontSize:'0.8125rem', color:'var(--charcoal)' }}>
                   ☝️ Select a zone above first, then pick a product to apply
@@ -480,7 +459,7 @@ export default function VisualizerPage() {
                         borderRadius:12, overflow:'hidden',
                         cursor: activeZone ? 'pointer' : 'not-allowed',
                         opacity: activeZone ? 1 : 0.5,
-                        background: isSelected(product._id) ? 'rgba(201,168,76,0.06)' : 'transparent',
+                        background: isSelected(product._id) ? 'rgba(201,168,76,0.06)' : 'var(--warm-white)',
                         transition:'all 0.15s', position:'relative'
                       }}>
                       <div style={{ aspectRatio:'4/3', overflow:'hidden' }}>
@@ -509,8 +488,45 @@ export default function VisualizerPage() {
               )}
             </div>
 
+            {/* Neoclassical presets */}
+            <div style={{ padding:'1.25rem', background:'var(--warm-white)' }}>
+              <label style={{ marginBottom:'0.75rem', display: 'flex', alignItems: 'center', gap: 6 }}>
+                One-click neoclassical presets
+                <span style={{ background: 'var(--gold)', color: 'white', fontSize: '0.65rem', padding: '2px 6px', borderRadius: 4, fontWeight: 'bold' }}>PRO</span>
+              </label>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+                {PRESETS.map(p => {
+                  const isLocked = !isExistingCustomer;
+                  
+                  return (
+                  <button key={p.id} onClick={() => {
+                      if (isLocked) {
+                        toast.error('This feature requires an Existing Customer PRO account. Contact support to unlock.');
+                        return;
+                      }
+                      setActivePreset(activePreset === p.id ? null : p.id);
+                    }}
+                    style={{
+                      padding:'0.75rem', border:`1px solid ${activePreset === p.id ? 'var(--gold)' : 'var(--border)'}`,
+                      borderRadius:10, background: activePreset === p.id ? 'rgba(201,168,76,0.1)' : 'var(--cream)',
+                      cursor: isLocked ? 'not-allowed' : 'pointer', textAlign:'left', transition:'all 0.15s',
+                      opacity: isLocked ? 0.6 : 1, position: 'relative'
+                    }}>
+                    <div style={{ fontSize:'1.25rem', marginBottom:4 }}>
+                      {p.icon}
+                      {isLocked && <Lock size={14} style={{ position: 'absolute', top: 12, right: 12, color: 'var(--charcoal-light)' }} />}
+                    </div>
+                    <div style={{ fontWeight:500, fontSize:'0.8125rem', color:'var(--charcoal)', fontFamily:'var(--font-body)' }}>
+                      {p.label}
+                    </div>
+                    <div style={{ fontSize:'0.75rem', color:'var(--charcoal-light)', fontFamily:'var(--font-body)' }}>{p.desc}</div>
+                  </button>
+                )})}
+              </div>
+            </div>
+
             {/* Generate button */}
-            <div style={{ padding:'1rem 1.25rem', position:'sticky', bottom:0, background:'var(--warm-white)', borderTop:'1px solid var(--border)' }}>
+            <div style={{ padding:'1rem 1.25rem', position:'sticky', bottom:0, background:'var(--warm-white)', borderTop:'1px solid var(--border-strong)' }}>
               <button onClick={handleGenerate} disabled={generating || segmenting || (selectedProducts.length === 0 && !activePreset)}
                 className="btn btn-primary btn-lg" style={{ width:'100%', justifyContent:'center' }}>
                 {generating ? (
@@ -541,16 +557,16 @@ export default function VisualizerPage() {
           </div>
 
           {/* Before / After */}
-          <div className="grid-2" style={{ marginBottom:'1.5rem' }}>
-            <div style={{ borderRadius:16, overflow:'hidden', border:'1px solid var(--border)' }}>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'1.5rem', marginBottom:'1.5rem' }}>
+            <div style={{ borderRadius:16, overflow:'hidden', border:'1px solid var(--border)', display:'flex', flexDirection:'column' }}>
               <div style={{ padding:'0.5rem 1rem', background:'var(--charcoal)', color:'white', fontSize:'0.8125rem', fontWeight:500 }}>Before</div>
-              <img src={photo} alt="Original room" style={{ width:'100%', display:'block' }} />
+              <img src={photo} alt="Original room" style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }} />
             </div>
-            <div style={{ borderRadius:16, overflow:'hidden', border:'2px solid var(--gold)' }}>
+            <div style={{ borderRadius:16, overflow:'hidden', border:'2px solid var(--gold)', display:'flex', flexDirection:'column' }}>
               <div style={{ padding:'0.5rem 1rem', background:'var(--gold)', color:'var(--charcoal)', fontSize:'0.8125rem', fontWeight:600 }}>
                 After — Arteffects AI
               </div>
-              <img src={result.renderedUrl || photo} alt="Visualized room" style={{ width:'100%', display:'block' }} />
+              <img src={result.renderedUrl || photo} alt="Visualized room" style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }} />
             </div>
           </div>
 
@@ -565,7 +581,7 @@ export default function VisualizerPage() {
 
           {/* Actions */}
           <div style={{ display:'flex', gap:'0.75rem', flexWrap:'wrap', marginBottom:'2rem' }}>
-            <a href={result.hdUrl || result.renderedUrl} download="arteffects-visualization.jpg"
+            <a href={result.renderedUrl || result.hdUrl} download="arteffects-visualization.jpg" target="_blank" rel="noopener noreferrer"
               className="btn btn-primary">
               <Download size={16} /> Download HD render
             </a>

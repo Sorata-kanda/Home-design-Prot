@@ -110,8 +110,8 @@ router.post('/generate', optionalAuth, async (req, res) => {
       renderedPublicId = photoPublicId;
     }
 
-    // Add watermark (Skipped since we are local now)
-    const watermarkedUrl = renderedUrl;
+    // Add Cloudinary watermark as requested
+    const watermarkedUrl = addWatermark(renderedUrl);
 
     // Always save the render to the database so that it can be shared or referenced in quotes
     const shareToken = uuidv4();
@@ -156,7 +156,7 @@ router.post('/generate', optionalAuth, async (req, res) => {
 async function generateWithLocalSD(photoUrl, photoPublicId, appliedProducts = [], productDetails, preset) {
   // If no products, we can't generate
   if (!appliedProducts || appliedProducts.length === 0) {
-    throw new Error('No products selected for generation');
+    throw new Error('Please select at least one product material to apply.');
   }
 
   // Get product details
@@ -167,34 +167,33 @@ async function generateWithLocalSD(photoUrl, photoPublicId, appliedProducts = []
     products.forEach(p => { productMap[p._id.toString()] = p; });
   }
 
-  console.log(`[Visualizer] Starting local SD generation for ${appliedProducts.length} zones`);
+  // Build the array of zones and textures
+  const appliedZones = appliedProducts.map(ap => {
+    const product = productMap[ap.productId];
+    return {
+      zone: ap.zone,
+      texture_image_path: product?.textureImage?.url || null
+    };
+  }).filter(z => z.texture_image_path);
 
-  // We will run them sequentially. For MVP, we'll just process the first zone, 
-  // since the local pipeline takes 15-30s per zone and chaining requires downloading 
-  // the intermediate image.
-  // To support multiple zones in the future, we would pass the result of zone 1 
-  // as the input to zone 2.
-  
-  const ap = appliedProducts[0];
-  const product = productMap[ap.productId];
-  
-  if (!product) {
-    throw new Error('Selected product not found');
+  if (appliedZones.length === 0) {
+    throw new Error('No valid textures found for selected products');
   }
 
-  const categoryClean = product.category.replace(/_/g, ' ');
-  const texturePrompt = `${product.name} ${categoryClean} texture`;
-  
-  const textureUrl = product.textureImage?.url || null;
-  
-  console.log(`[Visualizer] Requesting texture mapping from FastAPI for base image: ${photoUrl}`);
+  console.log(`[Visualizer] Starting local multi-zone mapping for ${appliedZones.length} zones`);
+
   // Call the Python API directly with the Cloudinary URLs
-  const result = await generateImage(photoUrl, ap.zone, texturePrompt, textureUrl);
+  const result = await generateImage(photoUrl, appliedZones, preset);
   
-  console.log(`[Visualizer] Uploading generated render to Cloudinary from remote URL: ${result.renderedUrl}`);
-  const uploaded = await cloudinary.uploader.upload(result.renderedUrl, {
+  console.log(`[Visualizer] Downloading render from Python API: ${result.renderedUrl}`);
+  const localTempPath = await downloadToTemp(result.renderedUrl);
+  
+  console.log(`[Visualizer] Uploading generated render to Cloudinary`);
+  const uploaded = await cloudinary.uploader.upload(localTempPath, {
     folder: 'arteffects/renders'
   });
+  
+  require('fs').unlinkSync(localTempPath);
 
   return {
     renderedUrl: uploaded.secure_url,
@@ -369,7 +368,8 @@ async function buildProductPrompt(appliedProducts = [], preset = null) {
  */
 function addWatermark(imageUrl) {
   if (!imageUrl || !imageUrl.includes('cloudinary.com')) return imageUrl;
-  return imageUrl.replace('/upload/', '/upload/l_text:Arial_32_bold:Arteffects,co_white,o_60,g_south_east,x_20,y_20/');
+  const watermarkText = encodeURIComponent(process.env.WATERMARK_TEXT || 'Arteffects');
+  return imageUrl.replace('/upload/', `/upload/l_text:Arial_32_bold:${watermarkText},co_white,o_60,g_south_east,x_20,y_20/`);
 }
 
 module.exports = router;

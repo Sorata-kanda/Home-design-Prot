@@ -10,6 +10,7 @@ const userSchema = new mongoose.Schema({
   role: { type: String, enum: ['client', 'admin'], default: 'client' },
   city: { type: String, default: '' },
   isVerified: { type: Boolean, default: false },
+  isExistingCustomer: { type: Boolean, default: false },
   otpCode: { type: String },
   otpExpires: { type: Date },
   renders: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Render' }],

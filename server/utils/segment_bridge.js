@@ -73,19 +73,17 @@ async function segmentImage(imageUrl) {
 /**
  * Call Python FastAPI for SD/Texture Mapping Generation
  * @param {string} imageUrl - Remote URL to the base image
- * @param {string} zone - The zone to replace
- * @param {string} texturePrompt - The texture prompt
- * @param {string} textureImageUrl - Remote URL of the product texture
+ * @param {Array} appliedZones - Array of objects {zone, texture_image_path}
+ * @param {string} preset - Optional preset like 'wainscoting'
  * @returns {Promise<object>} The result containing renderedUrl
  */
-async function generateImage(imageUrl, zone, texturePrompt, textureImageUrl = null) {
+async function generateImage(imageUrl, appliedZones, preset = null) {
   console.log(`[SegBridge] Sending request to Python API (${PYTHON_API_URL}/generate)...`);
   try {
     const response = await axios.post(`${PYTHON_API_URL}/generate`, {
       image_path: imageUrl,
-      zone: zone,
-      texture_prompt: texturePrompt,
-      texture_image_path: textureImageUrl
+      applied_zones: appliedZones,
+      preset: preset
     }, {
       timeout: 300000 // 5 minutes
     });

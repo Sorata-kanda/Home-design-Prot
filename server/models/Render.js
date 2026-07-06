@@ -23,8 +23,7 @@ const renderSchema = new mongoose.Schema({
   appliedProducts: [{
     product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product' },
     zone: {
-      type: String,
-      enum: ['floor', 'wall', 'ceiling', 'pillar', 'cornice', 'wainscoting', 'elevation', 'exterior', 'staircase']
+      type: String
     },
     coverage: Number // estimated sq ft
   }],
