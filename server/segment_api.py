@@ -14,6 +14,7 @@ import tempfile
 from PIL import Image
 from transformers import SegformerForSemanticSegmentation, SegformerImageProcessor
 from fastapi import FastAPI, HTTPException
+from typing import List, Optional
 from pydantic import BaseModel
 from fastapi.staticfiles import StaticFiles
 
@@ -70,11 +71,14 @@ def load_image(path_or_url):
 class SegmentRequest(BaseModel):
     image_path: str
 
+class ZoneTexture(BaseModel):
+    zone: str
+    texture_image_path: str
+
 class GenerateRequest(BaseModel):
     image_path: str
-    zone: str
-    texture_prompt: str
-    texture_image_path: str = None
+    applied_zones: List[ZoneTexture]
+    preset: Optional[str] = None
 
 
 # ── Stage 1: Segmentation ───────────────────────────────────────────
@@ -271,7 +275,7 @@ def run_texture_mapping(img_bgr, mask, texture_path):
 def generate_endpoint(req: GenerateRequest):
     """Runs the full pipeline to replace a texture in a specific zone."""
     temp_img = None
-    temp_tex = None
+    temp_tex_files = []
     try:
         # Load main image (local or remote)
         try:
@@ -281,46 +285,59 @@ def generate_endpoint(req: GenerateRequest):
 
         start_time = time.time()
         
-        # Run local pipeline
-        mask = run_segmentation_for_mask(img, req.zone)
-        mask = prepare_mask(mask, img.shape)
-        
-        # Load texture image (local or remote)
-        if not req.texture_image_path:
-            raise HTTPException(status_code=400, detail="Product texture image path is required.")
-        
-        try:
-            if req.texture_image_path.startswith("http://") or req.texture_image_path.startswith("https://"):
-                print(f"[Loader] Downloading remote texture: {req.texture_image_path}")
-                fd, temp_tex = tempfile.mkstemp(suffix=".jpg")
-                try:
-                    # User agent header is important for Cloudinary images
-                    req_obj = urllib.request.Request(
-                        req.texture_image_path, 
-                        headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
-                    )
-                    with urllib.request.urlopen(req_obj) as response, open(temp_tex, 'wb') as out_file:
-                        out_file.write(response.read())
-                    texture_path = temp_tex
-                finally:
-                    os.close(fd)
-            else:
-                if not os.path.exists(req.texture_image_path):
-                    raise FileNotFoundError(f"Local texture path not found: {req.texture_image_path}")
-                texture_path = req.texture_image_path
-        except Exception as e:
-            raise HTTPException(status_code=400, detail=f"Failed to load texture image: {str(e)}")
+        current_img = img.copy()
+
+        for ap in req.applied_zones:
+            # Run local pipeline
+            mask = run_segmentation_for_mask(img, ap.zone)
             
-        print(f"[Texture Map] Mapping actual product texture from: {texture_path}")
-        inpainted = run_texture_mapping(img, mask, texture_path)
+            # --- Wainscoting Hack ---
+            if req.preset == "wainscoting" and ap.zone == "wall":
+                # Crop top 60% of the wall mask
+                h, w = mask.shape
+                cutoff = int(h * 0.6)
+                mask[0:cutoff, :] = 0
+            # ------------------------
+
+            mask = prepare_mask(mask, img.shape)
             
-        result = composite(img, inpainted, mask)
+            # Load texture image (local or remote)
+            if not ap.texture_image_path:
+                continue
+            
+            try:
+                if ap.texture_image_path.startswith("http://") or ap.texture_image_path.startswith("https://"):
+                    print(f"[Loader] Downloading remote texture: {ap.texture_image_path}")
+                    fd, temp_tex = tempfile.mkstemp(suffix=".jpg")
+                    try:
+                        # User agent header is important for Cloudinary images
+                        req_obj = urllib.request.Request(
+                            ap.texture_image_path, 
+                            headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
+                        )
+                        with urllib.request.urlopen(req_obj) as response, open(temp_tex, 'wb') as out_file:
+                            out_file.write(response.read())
+                        texture_path = temp_tex
+                        temp_tex_files.append(temp_tex)
+                    finally:
+                        os.close(fd)
+                else:
+                    if not os.path.exists(ap.texture_image_path):
+                        raise FileNotFoundError(f"Local texture path not found: {ap.texture_image_path}")
+                    texture_path = ap.texture_image_path
+            except Exception as e:
+                raise HTTPException(status_code=400, detail=f"Failed to load texture image: {str(e)}")
+                
+            print(f"[Texture Map] Mapping actual product texture from: {texture_path}")
+            inpainted = run_texture_mapping(current_img, mask, texture_path)
+                
+            current_img = composite(current_img, inpainted, mask)
 
         # Save to public temp folder
         filename = f"render_{uuid.uuid4().hex[:8]}.jpg"
         output_path = os.path.join(UPLOAD_DIR, filename)
         
-        cv2.imwrite(output_path, result, [cv2.IMWRITE_JPEG_QUALITY, 95])
+        cv2.imwrite(output_path, current_img, [cv2.IMWRITE_JPEG_QUALITY, 95])
         
         duration = time.time() - start_time
         print(f"\nDone! Saved to {output_path} in {duration:.1f}s")
@@ -338,7 +355,8 @@ def generate_endpoint(req: GenerateRequest):
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         # Clean up all downloaded temp files
-        for f in [temp_img, temp_tex]:
+        files_to_remove = [temp_img] + temp_tex_files
+        for f in files_to_remove:
             if f and os.path.exists(f):
                 try:
                     os.remove(f)
