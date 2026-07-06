@@ -1,15 +1,17 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { Wand2, Trash2, Share2, Calendar, Clock, Package, User as UserIcon } from 'lucide-react';
+import { Wand2, Trash2, Share2, Calendar, Clock, Package, User as UserIcon, Eye } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { rendersAPI, ordersAPI, authAPI } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
+import OrderDetailsModal from '../components/shared/OrderDetailsModal';
 
 export default function DashboardPage() {
   const { user, login } = useAuth(); // login is usually just setAuth or similar, but we can update state if needed, or just let context handle it
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('profile');
+  const [selectedOrder, setSelectedOrder] = useState(null);
 
   // Renders Tab
   const { data: renderData, isLoading: rendersLoading } = useQuery({
@@ -121,7 +123,7 @@ export default function DashboardPage() {
                       <h3 style={{ fontSize:'0.9375rem', margin:'0 0 4px' }}>{render.title || 'Visualization'}</h3>
                       {render.appliedProducts?.length > 0 && (
                         <p style={{ fontSize:'0.8125rem', margin:'0 0 8px', color:'var(--charcoal-light)' }}>
-                          {render.appliedProducts.slice(0,2).map(p => p.productName || 'Product').join(' · ')}
+                          {render.appliedProducts.slice(0,2).map(p => p.product?.name || p.product?.sku || 'Product').join(' · ')}
                           {render.appliedProducts.length > 2 && ` +${render.appliedProducts.length - 2} more`}
                         </p>
                       )}
@@ -133,18 +135,10 @@ export default function DashboardPage() {
                           <Clock size={12} /> {daysLeft(render.expiresAt)}d left
                         </span>
                       </div>
-                      <div style={{ display:'flex', gap:6 }}>
-                        <a href={render.watermarkedUrl || render.renderedPhoto?.url} download="stratum-visualization.jpg" target="_blank" rel="noopener noreferrer" className="btn btn-secondary btn-sm" style={{ flex:1, justifyContent:'center' }}>
-                          Download
-                        </a>
-                        <button onClick={() => shareMutation.mutate(render._id)} className="btn btn-ghost btn-sm" title="Share">
-                          <Share2 size={15} />
-                        </button>
-                        <button onClick={() => {
-                          if (window.confirm('Delete this visualization?')) deleteMutation.mutate(render._id);
-                        }} className="btn btn-ghost btn-sm" title="Delete" style={{ color:'var(--charcoal-light)' }}>
-                          <Trash2 size={15} />
-                        </button>
+                      <div style={{ display:'flex', gap:6, marginTop: 'auto' }}>
+                        <Link to={`/render/${render._id}`} className="btn btn-primary btn-sm" style={{ flex:1, justifyContent:'center' }}>
+                          <Eye size={15} style={{ marginRight: 4 }} /> View Details & Purchase
+                        </Link>
                       </div>
                     </div>
                   </div>
@@ -171,15 +165,15 @@ export default function DashboardPage() {
             ) : (
               <div style={{ display:'flex', flexDirection:'column', gap:'1rem' }}>
                 {orders.map(order => (
-                  <div key={order._id} className="card" style={{ padding:'1.5rem', display:'flex', flexDirection:'column', gap:'1rem' }}>
+                  <div key={order._id} className="card" style={{ padding:'1.25rem', display:'flex', flexDirection:'column', gap:'1rem' }}>
                     <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', flexWrap:'wrap', gap:'1rem' }}>
                       <div>
                         <div style={{ display:'flex', alignItems:'center', gap:'1rem', marginBottom:8 }}>
-                          <h3 style={{ margin:0, fontSize:'1.125rem' }}>Order #{order.transactionId?.substring(0,8) || order._id.substring(0,8)}</h3>
+                          <h3 style={{ margin:0, fontSize:'1.125rem' }}>Order #{order.orderNumber || order._id.substring(0,8)}</h3>
                           <span className="badge badge-gold" style={{ textTransform:'capitalize' }}>{order.fulfillmentStatus}</span>
                         </div>
                         <p style={{ margin:0, fontSize:'0.875rem', color:'var(--charcoal-light)' }}>
-                          Placed on {new Date(order.createdAt).toLocaleDateString('en-IN')}
+                          Placed on {new Date(order.createdAt).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}
                         </p>
                       </div>
                       <div style={{ textAlign:'right' }}>
@@ -188,18 +182,33 @@ export default function DashboardPage() {
                       </div>
                     </div>
                     
-                    <div style={{ background:'var(--cream)', padding:'1rem', borderRadius:8 }}>
-                      <h4 style={{ margin:'0 0 0.5rem', fontSize:'0.875rem' }}>Shipping Address</h4>
-                      <p style={{ margin:0, fontSize:'0.875rem', color:'var(--charcoal-light)', lineHeight:1.5 }}>
-                        {order.contactName}<br/>
-                        {order.shippingAddress?.street}, {order.shippingAddress?.city}<br/>
-                        {order.shippingAddress?.state} {order.shippingAddress?.pincode}
-                      </p>
+                    {/* Condensed item images */}
+                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
+                      {order.lineItems?.slice(0, 5).map((item, idx) => (
+                         <img 
+                          key={idx}
+                          src={item.product?.textureImage?.url || item.product?.thumbnailImage?.url} 
+                          alt={item.productName} 
+                          title={item.productName}
+                          style={{ width:40, height:40, borderRadius:8, objectFit:'cover', border: '1px solid var(--border)' }}
+                          onError={e => { e.target.style.display='none'; }} 
+                        />
+                      ))}
+                      {order.lineItems?.length > 5 && (
+                        <div style={{ width:40, height:40, borderRadius:8, background:'var(--cream)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'0.75rem', color:'var(--charcoal-light)', border: '1px solid var(--border)' }}>
+                          +{order.lineItems.length - 5}
+                        </div>
+                      )}
                     </div>
+                    
+                    <button onClick={() => setSelectedOrder(order)} className="btn btn-secondary btn-sm" style={{ alignSelf: 'flex-start', marginTop: '0.5rem', padding: '0.5rem 1.25rem' }}>
+                      Track Order
+                    </button>
                   </div>
                 ))}
               </div>
             )}
+            {selectedOrder && <OrderDetailsModal order={selectedOrder} onClose={() => setSelectedOrder(null)} />}
           </div>
         )}
       </div>

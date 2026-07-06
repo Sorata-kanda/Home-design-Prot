@@ -5,6 +5,8 @@ const Order = require('../models/Order');
 const { protect, adminOnly, optionalAuth } = require('../middleware/auth');
 const mongoose = require('mongoose');
 
+const generateOrderNumber = () => 'ORD-' + crypto.randomBytes(3).toString('hex').toUpperCase();
+
 // ==========================================
 // 1. SIMULATED CHECKOUT (For Portfolio/Demo)
 // ==========================================
@@ -13,6 +15,7 @@ router.post('/simulated-checkout', optionalAuth, async (req, res) => {
     const { contactName, contactPhone, contactEmail, shippingAddress, lineItems, totalAmount, paymentMethod, renderId } = req.body;
 
     const order = await Order.create({
+      orderNumber: generateOrderNumber(),
       user: req.user ? req.user._id : null, // Assuming optional auth, though frontend might send it
       render: renderId,
       contactName,
@@ -37,7 +40,6 @@ router.post('/simulated-checkout', optionalAuth, async (req, res) => {
 // ==========================================
 // 2. RAZORPAY SKELETON (For Future Client)
 // ==========================================
-/*
 const Razorpay = require('razorpay');
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
@@ -45,9 +47,9 @@ const razorpay = new Razorpay({
 });
 
 // Step 2A: Create Razorpay Order
-router.post('/razorpay/create', async (req, res) => {
+router.post('/razorpay/create', optionalAuth, async (req, res) => {
   try {
-    const { totalAmount } = req.body;
+    const { totalAmount, contactName, contactPhone, contactEmail, shippingAddress, lineItems, renderId } = req.body;
     const options = {
       amount: Math.round(totalAmount * 100), // Amount in paise
       currency: 'INR',
@@ -58,15 +60,26 @@ router.post('/razorpay/create', async (req, res) => {
     
     // Create pending order in DB
     const order = await Order.create({
-      ...req.body,
+      orderNumber: generateOrderNumber(),
+      user: req.user ? req.user._id : null,
+      render: renderId,
+      contactName,
+      contactPhone,
+      contactEmail,
+      shippingAddress,
+      lineItems,
+      totalAmount,
       paymentMethod: 'razorpay',
       paymentStatus: 'pending',
-      transactionId: rzpOrder.id
+      transactionId: rzpOrder.id,
+      fulfillmentStatus: 'processing'
     });
 
     res.json({ rzpOrder, orderId: order._id });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('Razorpay Error:', err);
+    const errorMsg = err.error?.description || err.message || JSON.stringify(err);
+    res.status(500).json({ error: errorMsg });
   }
 });
 
@@ -90,7 +103,6 @@ router.post('/razorpay/verify', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-*/
 
 // ==========================================
 // 3. ADMIN ROUTES (For Orders Tab)
@@ -101,6 +113,7 @@ router.get('/mine', protect, async (req, res) => {
   try {
     const orders = await Order.find({ user: req.user._id })
       .sort({ createdAt: -1 })
+      .populate('lineItems.product', 'textureImage thumbnailImage sku')
       .lean();
     res.json({ orders });
   } catch (err) {
@@ -114,6 +127,7 @@ router.get('/', protect, adminOnly, async (req, res) => {
     const orders = await Order.find()
       .sort({ createdAt: -1 })
       .populate('user', 'name email')
+      .populate('lineItems.product', 'textureImage thumbnailImage sku')
       .lean();
     res.json({ orders });
   } catch (err) {

@@ -61,7 +61,7 @@ export default function QuoteModal({ selectedProducts, renderId, onClose }) {
         {/* Header */}
         <div style={{ padding:'1.25rem 1.5rem', borderBottom:'1px solid var(--border)', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
           <div>
-            <h3 style={{ margin:0 }}>Request a quote</h3>
+            <h3 style={{ margin:0 }}>Request Bulk Quote</h3>
             <p style={{ margin:0, fontSize:'0.8125rem' }}>Our team will call within 24 hours</p>
           </div>
           <button onClick={onClose} className="btn btn-ghost btn-sm" style={{ padding:'0.375rem' }}>

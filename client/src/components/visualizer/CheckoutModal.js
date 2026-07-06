@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import { useQueryClient } from '@tanstack/react-query';
 import { ordersAPI } from '../../utils/api';
 import { useAuth } from '../../context/AuthContext';
+import AddressAutocomplete from '../shared/AddressAutocomplete';
 
 export default function CheckoutModal({ selectedProducts = [], renderId, onClose, onSuccess }) {
   const { user } = useAuth();
@@ -14,13 +15,13 @@ export default function CheckoutModal({ selectedProducts = [], renderId, onClose
     contactPhone: user?.phone || '',
     contactEmail: user?.email || '',
     shippingAddress: {
+      houseNumber: user?.address?.houseNumber || '',
       street: user?.address?.street || '',
       city: user?.address?.city || user?.city || '',
       state: user?.address?.state || '',
       pincode: user?.address?.pincode || ''
     },
-    areas: Object.fromEntries(selectedProducts.map(p => [p.productId + p.zone, p.quantity || 100])),
-    paymentMethod: 'simulated_upi'
+    areas: Object.fromEntries(selectedProducts.map(p => [p.productId, p.quantity || 100]))
   });
   
   const [loading, setLoading] = useState(false);
@@ -28,52 +29,114 @@ export default function CheckoutModal({ selectedProducts = [], renderId, onClose
   const [orderData, setOrderData] = useState(null);
   
   const totalAmount = selectedProducts.reduce((sum, p) => {
-    const area = form.areas[p.productId + p.zone] || p.quantity || 100;
+    const area = form.areas[p.productId] || p.quantity || 100;
     return sum + area * (p.product?.pricePerSqFt || 0);
   }, 0);
 
+  const loadRazorpayScript = () => {
+    return new Promise((resolve) => {
+      if (window.Razorpay) return resolve(true);
+      const script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  };
+
   const handleCheckout = async (e) => {
     e.preventDefault();
-    if (!form.contactName || !form.contactPhone || !form.shippingAddress.pincode) {
-      toast.error('Name, phone, and pincode are required');
+    if (!form.contactName || !form.contactEmail || !form.contactPhone || !form.shippingAddress.pincode) {
+      toast.error('Name, email, phone, and pincode are required');
       return;
     }
     setLoading(true);
     
-    // Simulate payment gateway delay
-    toast.loading('Initializing Secure Gateway...', { id: 'payment' });
-    
-    setTimeout(async () => {
-      try {
-        toast.loading('Processing payment...', { id: 'payment' });
-        
-        const res = await ordersAPI.simulatedCheckout({
-          ...form,
-          renderId,
-          totalAmount,
-          lineItems: selectedProducts.map(p => ({
-            product: p.productId,
-            productName: p.product?.name,
-            sku: p.product?.sku,
-            zone: p.zone,
-            estimatedArea: form.areas[p.productId + p.zone] || p.quantity || 100,
-            pricePerSqFt: p.product?.pricePerSqFt,
-            lineTotal: (form.areas[p.productId + p.zone] || p.quantity || 100) * (p.product?.pricePerSqFt || 0)
-          }))
-        });
-        
-        toast.success('Payment successful!', { id: 'payment' });
-        setOrderData(res.data.order);
-        setSubmitted(true);
-        queryClient.invalidateQueries(['myOrders']);
-        queryClient.invalidateQueries(['cart']);
-        if (onSuccess) onSuccess();
-      } catch (err) {
-        toast.error(err.response?.data?.error || 'Payment failed. Please try again.', { id: 'payment' });
-      } finally {
+    const resScript = await loadRazorpayScript();
+    if (!resScript) {
+      toast.error('Razorpay SDK failed to load. Are you online?');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      toast.loading('Initializing Secure Gateway...', { id: 'payment' });
+      
+      const res = await ordersAPI.razorpayCreate({
+        ...form,
+        renderId,
+        totalAmount,
+        lineItems: selectedProducts.map(p => ({
+          product: p.productId,
+          productName: p.product?.name,
+          sku: p.product?.sku,
+          estimatedArea: form.areas[p.productId] || p.quantity || 100,
+          pricePerSqFt: p.product?.pricePerSqFt,
+          lineTotal: (form.areas[p.productId] || p.quantity || 100) * (p.product?.pricePerSqFt || 0)
+        }))
+      });
+      
+      const { rzpOrder, orderId } = res.data;
+
+      const options = {
+        key: process.env.REACT_APP_RAZORPAY_KEY_ID || '', // Set in .env
+        amount: rzpOrder.amount,
+        currency: "INR",
+        name: "Stratum by DSYN",
+        description: "Material Order",
+        order_id: rzpOrder.id,
+        handler: async function (response) {
+          try {
+            toast.loading('Verifying payment...', { id: 'payment' });
+            await ordersAPI.razorpayVerify({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+              orderId: orderId
+            });
+            toast.success('Payment successful!', { id: 'payment' });
+            setOrderData({ transactionId: response.razorpay_payment_id });
+            setSubmitted(true);
+            queryClient.invalidateQueries(['myOrders']);
+            queryClient.invalidateQueries(['admin-orders']);
+            queryClient.invalidateQueries(['admin-dash']);
+            queryClient.invalidateQueries(['cart']);
+            if (onSuccess) onSuccess();
+          } catch (err) {
+            toast.error(err.response?.data?.error || 'Payment verification failed.', { id: 'payment' });
+          }
+        },
+        prefill: {
+          name: form.contactName,
+          email: form.contactEmail,
+          // Razorpay strictly only accepts one valid phone number for OTP verification.
+          // We extract the first sequence of digits (min 10) from the user's input.
+          contact: form.contactPhone.split(/[,/\s]/)[0].trim() || form.contactPhone
+        },
+        theme: {
+          color: "#C9A84C"
+        },
+        modal: {
+          ondismiss: function() {
+            setLoading(false);
+            toast.dismiss('payment');
+          }
+        }
+      };
+
+      const rzp = new window.Razorpay(options);
+      rzp.on('payment.failed', function (response){
+        toast.error('Payment failed: ' + response.error.description, { id: 'payment' });
         setLoading(false);
-      }
-    }, 1500);
+      });
+      
+      toast.dismiss('payment');
+      rzp.open();
+      
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Failed to initialize payment. Check API keys.', { id: 'payment' });
+      setLoading(false);
+    }
   };
 
   return (
@@ -119,14 +182,24 @@ export default function CheckoutModal({ selectedProducts = [], renderId, onClose
             <div style={{ marginBottom:'1.5rem', padding:'1rem', background:'var(--cream)', borderRadius:12 }}>
               <h4 style={{ margin:'0 0 1rem 0', color:'var(--charcoal)' }}>Order Summary</h4>
               {selectedProducts.map((p, i) => (
-                <div key={i} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8, paddingBottom:8, borderBottom:'1px dashed rgba(0,0,0,0.05)' }}>
-                  <div style={{ flex:1 }}>
-                    <p style={{ fontWeight:500, margin:0, fontSize:'0.875rem', color:'var(--charcoal)' }}>{p.product?.name}</p>
-                    <p style={{ margin:0, fontSize:'0.75rem', color:'var(--charcoal-light)' }}>₹{p.product?.pricePerSqFt}/sq.ft</p>
+                <div key={i} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12, paddingBottom:12, borderBottom:'1px dashed rgba(0,0,0,0.05)' }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:'0.75rem', flex:1 }}>
+                    <img 
+                      src={p.product?.textureImage?.url || p.product?.thumbnailImage?.url} 
+                      alt="" 
+                      style={{ width:40, height:40, borderRadius:8, objectFit:'cover', flexShrink:0 }}
+                      onError={e => { e.target.style.display='none'; }} 
+                    />
+                    <div>
+                      <p style={{ fontWeight:500, margin:0, fontSize:'0.875rem', color:'var(--charcoal)' }}>
+                        {p.product?.name} <span style={{ fontSize:'0.75rem', color:'var(--charcoal-light)', fontWeight:400, marginLeft:4 }}>({p.product?.sku})</span>
+                      </p>
+                      <p style={{ margin:0, fontSize:'0.75rem', color:'var(--charcoal-light)' }}>₹{p.product?.pricePerSqFt}/sq.ft</p>
+                    </div>
                   </div>
                   <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-                    <input type="number" value={form.areas[p.productId + p.zone] || 100}
-                      onChange={e => setForm(f => ({ ...f, areas: { ...f.areas, [p.productId + p.zone]: Number(e.target.value) } }))}
+                    <input type="number" value={form.areas[p.productId] || 100}
+                      onChange={e => setForm(f => ({ ...f, areas: { ...f.areas, [p.productId]: Number(e.target.value) } }))}
                       style={{ width:80, textAlign:'right', padding:'0.25rem 0.5rem', fontSize:'0.875rem' }}
                       min={1} />
                     <span style={{ fontSize:'0.75rem', color:'var(--charcoal-light)' }}>sq.ft</span>
@@ -143,10 +216,14 @@ export default function CheckoutModal({ selectedProducts = [], renderId, onClose
             </div>
 
             {/* Shipping & Contact */}
+            <div style={{ marginBottom:'0.875rem' }}>
+              <label>Full Name *</label>
+              <input type="text" value={form.contactName} onChange={e => setForm(f => ({ ...f, contactName: e.target.value }))} required />
+            </div>
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'0.875rem', marginBottom:'0.875rem' }}>
               <div>
-                <label>Full Name *</label>
-                <input type="text" value={form.contactName} onChange={e => setForm(f => ({ ...f, contactName: e.target.value }))} required />
+                <label>Email *</label>
+                <input type="email" value={form.contactEmail} onChange={e => setForm(f => ({ ...f, contactEmail: e.target.value }))} required />
               </div>
               <div>
                 <label>Phone *</label>
@@ -155,8 +232,34 @@ export default function CheckoutModal({ selectedProducts = [], renderId, onClose
             </div>
             
             <div style={{ marginBottom:'0.875rem' }}>
-              <label>Delivery Address (Street) *</label>
-              <input type="text" value={form.shippingAddress.street} onChange={e => setForm(f => ({ ...f, shippingAddress: { ...f.shippingAddress, street: e.target.value } }))} required />
+              <label>Street Address *</label>
+              <input 
+                type="text" 
+                value={form.shippingAddress.houseNumber} 
+                onChange={e => setForm(f => ({ ...f, shippingAddress: { ...f.shippingAddress, houseNumber: e.target.value } }))} 
+                required 
+                placeholder="e.g., Flat 4B, Signature Towers, MG Road, North Zone"
+              />
+            </div>
+            
+            <div style={{ marginBottom:'0.875rem' }}>
+              <label>Province or Town (Search to autofill) *</label>
+              <AddressAutocomplete
+                value={form.shippingAddress.street}
+                onChange={val => setForm(f => ({ ...f, shippingAddress: { ...f.shippingAddress, street: val } }))}
+                onSelect={(data) => {
+                  setForm(f => ({
+                    ...f,
+                    shippingAddress: {
+                      ...f.shippingAddress,
+                      street: data.street || data.fullAddress.split(',')[0],
+                      city: data.city || f.shippingAddress.city,
+                      state: data.state || f.shippingAddress.state,
+                      pincode: data.pincode || f.shippingAddress.pincode
+                    }
+                  }));
+                }}
+              />
             </div>
 
             <div style={{ display:'grid', gridTemplateColumns:'2fr 1fr 1fr', gap:'0.875rem', marginBottom:'1.5rem' }}>
@@ -171,25 +274,6 @@ export default function CheckoutModal({ selectedProducts = [], renderId, onClose
               <div>
                 <label>Pincode *</label>
                 <input type="text" value={form.shippingAddress.pincode} onChange={e => setForm(f => ({ ...f, shippingAddress: { ...f.shippingAddress, pincode: e.target.value } }))} required />
-              </div>
-            </div>
-
-            {/* Payment Options (Simulated) */}
-            <div style={{ marginBottom:'1.5rem' }}>
-              <label style={{ marginBottom:'0.5rem', display:'block' }}>Select Payment Method</label>
-              <div style={{ display:'flex', gap:'0.5rem' }}>
-                <button type="button" onClick={() => setForm(f => ({ ...f, paymentMethod: 'simulated_upi' }))}
-                  style={{ flex:1, padding:'0.75rem', border: form.paymentMethod === 'simulated_upi' ? '2px solid var(--gold)' : '1px solid var(--border)', borderRadius:8, background: form.paymentMethod === 'simulated_upi' ? 'rgba(201,168,76,0.05)' : '#fff', cursor:'pointer' }}>
-                  <div style={{ fontWeight:600, color:'var(--charcoal)' }}>UPI</div>
-                  <div style={{ fontSize:'0.75rem', color:'var(--charcoal-light)' }}>GPay, PhonePe</div>
-                </button>
-                <button type="button" onClick={() => setForm(f => ({ ...f, paymentMethod: 'simulated_card' }))}
-                  style={{ flex:1, padding:'0.75rem', border: form.paymentMethod === 'simulated_card' ? '2px solid var(--gold)' : '1px solid var(--border)', borderRadius:8, background: form.paymentMethod === 'simulated_card' ? 'rgba(201,168,76,0.05)' : '#fff', cursor:'pointer' }}>
-                  <div style={{ fontWeight:600, color:'var(--charcoal)', display:'flex', alignItems:'center', justifyContent:'center', gap:4 }}>
-                    <CreditCard size={14} /> Card
-                  </div>
-                  <div style={{ fontSize:'0.75rem', color:'var(--charcoal-light)' }}>Visa, Mastercard</div>
-                </button>
               </div>
             </div>
 

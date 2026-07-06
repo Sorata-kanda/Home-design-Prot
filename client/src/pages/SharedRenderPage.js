@@ -1,17 +1,41 @@
-import { useParams, Link } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { Wand2, MessageSquare } from 'lucide-react';
-import { rendersAPI } from '../utils/api';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
+import { Wand2, MessageSquare, Zap, Download, Share2 } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { rendersAPI, cartAPI } from '../utils/api';
 import { useState } from 'react';
 import QuoteModal from '../components/visualizer/QuoteModal';
 
 export default function SharedRenderPage() {
-  const { token } = useParams();
+  const { token, id } = useParams();
   const [showQuote, setShowQuote] = useState(false);
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+
+  const shareMutation = useMutation({
+    mutationFn: rendersAPI.share,
+    onSuccess: (res) => {
+      navigator.clipboard.writeText(res.data.shareUrl).catch(() => {});
+      toast.success('Share link copied to clipboard!');
+    },
+    onError: () => toast.error('Failed to create share link')
+  });
+
+  const handleShare = () => {
+    if (token) {
+      navigator.clipboard.writeText(window.location.href).catch(() => {});
+      toast.success('Share link copied to clipboard!');
+    } else if (id) {
+      shareMutation.mutate(id);
+    }
+  };
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ['shared-render', token],
-    queryFn: () => rendersAPI.getShared(token).then(r => r.data)
+    queryKey: ['render', token || id],
+    queryFn: () => {
+      if (id) return rendersAPI.getById(id).then(r => r.data);
+      return rendersAPI.getShared(token).then(r => r.data);
+    }
   });
 
   const render = data?.render;
@@ -87,12 +111,49 @@ export default function SharedRenderPage() {
 
         {/* CTAs */}
         <div style={{ display:'flex', gap:'1rem', flexWrap:'wrap', justifyContent:'center' }}>
-          <button onClick={() => setShowQuote(true)} className="btn btn-primary btn-lg">
-            <MessageSquare size={18} /> Request a quote
+          <a 
+            href={render.watermarkedUrl || render.renderedPhoto?.url || render.originalPhoto?.url} 
+            download="stratum-visualization.jpg" 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            className="btn btn-ghost btn-lg" 
+            style={{ border: '1px solid var(--border)' }}
+          >
+            <Download size={18} /> Download
+          </a>
+
+          <button onClick={() => setShowQuote(true)} className="btn btn-secondary btn-lg">
+            <MessageSquare size={18} /> Request Bulk Quote
           </button>
-          <Link to="/login" className="btn btn-secondary btn-lg">
-            <Wand2 size={18} /> Try with your room
-          </Link>
+
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <button 
+              className="btn btn-primary btn-lg" 
+              onClick={async () => {
+                toast.loading('Adding materials to cart...', { id: 'cartShared' });
+                try {
+                  for (const ap of appliedProducts) {
+                    await cartAPI.add({ productId: ap.product._id, quantity: 1, zone: ap.zone });
+                  }
+                  queryClient.invalidateQueries(['cart']);
+                  toast.success('Materials added to cart! Click the cart icon to checkout.', { id: 'cartShared' });
+                } catch (err) {
+                  toast.error('Failed to add some items', { id: 'cartShared' });
+                }
+              }}
+            >
+              <Zap size={18} /> Buy materials now
+            </button>
+            
+            <button 
+              className="btn btn-primary btn-lg"
+              style={{ padding: '0 1rem' }}
+              title="Share"
+              onClick={handleShare}
+            >
+              <Share2 size={18} />
+            </button>
+          </div>
         </div>
 
         <p style={{ textAlign:'center', marginTop:'1.5rem', fontSize:'0.8125rem', color:'var(--charcoal-light)' }}>

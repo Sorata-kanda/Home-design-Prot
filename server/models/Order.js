@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 
 const orderSchema = new mongoose.Schema({
+  orderNumber: { type: String, unique: true },
   user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   render: { type: mongoose.Schema.Types.ObjectId, ref: 'Render' },
   
@@ -9,6 +10,7 @@ const orderSchema = new mongoose.Schema({
   contactPhone: { type: String, required: true },
   contactEmail: String,
   shippingAddress: {
+    houseNumber: String,
     street: String,
     city: String,
     state: String,

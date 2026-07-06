@@ -610,7 +610,7 @@ export default function VisualizerPage() {
           )}
 
           {/* Actions */}
-          <div style={{ display:'flex', gap:'0.75rem', flexWrap:'wrap', marginBottom:'2rem' }}>
+          <div style={{ display:'flex', gap:'0.75rem', flexWrap:'wrap', justifyContent:'center', marginBottom:'2rem' }}>
             <button onClick={() => handleDownload(result.hdUrl || result.renderedUrl, 'arteffects-visualization.jpg')}
               className="btn btn-primary">
               <Download size={16} /> Download HD render
@@ -619,22 +619,25 @@ export default function VisualizerPage() {
               <Share2 size={16} /> Share visualization
             </button>
             <button className="btn btn-secondary" onClick={() => setShowQuoteModal(true)}>
-              <MessageSquare size={16} /> Request quote
+              <MessageSquare size={16} /> Request Bulk Quote
             </button>
             <button 
               className="btn btn-primary" 
-              onClick={() => {
+              onClick={async () => {
                 if (selectedProducts.length === 0) {
                   toast.error('Please select at least one material first.');
                   return;
                 }
-                const promises = selectedProducts.map(p => 
-                  cartAPI.add({ productId: p.productId, quantity: 1, zone: p.zone })
-                );
-                Promise.all(promises).then(() => {
+                toast.loading('Adding to cart...', { id: 'cartAdd' });
+                try {
+                  for (const p of selectedProducts) {
+                    await cartAPI.add({ productId: p.productId, quantity: 1, zone: p.zone });
+                  }
                   queryClient.invalidateQueries(['cart']);
-                  toast.success('Materials added to cart!');
-                });
+                  toast.success('Materials added to cart!', { id: 'cartAdd' });
+                } catch (err) {
+                  toast.error('Failed to add some items', { id: 'cartAdd' });
+                }
               }}
             >
               <Zap size={16} /> Buy Now
@@ -668,14 +671,17 @@ export default function VisualizerPage() {
                 <button 
                   className="btn btn-primary" 
                   style={{ flex:1 }}
-                  onClick={() => {
-                    const promises = selectedProducts.map(p => 
-                      cartAPI.add({ productId: p.productId, quantity: 1, zone: p.zone })
-                    );
-                    Promise.all(promises).then(() => {
+                  onClick={async () => {
+                    toast.loading('Adding to cart...', { id: 'cartAdd2' });
+                    try {
+                      for (const p of selectedProducts) {
+                        await cartAPI.add({ productId: p.productId, quantity: 1, zone: p.zone });
+                      }
                       queryClient.invalidateQueries(['cart']);
-                      toast.success('Materials added to cart!');
-                    });
+                      toast.success('Materials added to cart!', { id: 'cartAdd2' });
+                    } catch (err) {
+                      toast.error('Failed to add some items', { id: 'cartAdd2' });
+                    }
                   }}
                 >
                   <Zap size={16} /> Buy materials now

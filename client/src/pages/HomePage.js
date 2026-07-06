@@ -5,7 +5,7 @@ const steps = [
   { icon: Camera, title: 'Upload your room', desc: 'Take a photo of any space — living room, lobby, staircase, elevation.' },
   { icon: Palette, title: 'Select our stones', desc: 'Browse marble, Gwalior stone, Moca Crema, columns, mouldings and more.' },
   { icon: Layers, title: 'AI applies it', desc: 'Our AI maps the material onto your exact space with realistic lighting.' },
-  { icon: Download, title: 'Download & quote', desc: 'Save the render, share it, or request a quote with one tap.' }
+  { icon: Download, title: 'Download & quote', desc: 'Save the render, share it, or request a Bulk Quote with one tap.' }
 ];
 
 const products = [

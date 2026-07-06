@@ -88,6 +88,8 @@ export const adminAPI = {
 // Orders
 export const ordersAPI = {
   simulatedCheckout: (data) => api.post('/orders/simulated-checkout', data),
+  razorpayCreate: (data) => api.post('/orders/razorpay/create', data),
+  razorpayVerify: (data) => api.post('/orders/razorpay/verify', data),
   getAll: () => api.get('/orders'),
   getMine: () => api.get('/orders/mine'),
   updateFulfillment: (id, status) => api.patch(`/orders/${id}/fulfillment`, { fulfillmentStatus: status }),

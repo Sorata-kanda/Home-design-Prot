@@ -13,6 +13,7 @@ router.get('/', protect, async (req, res) => {
     }
     res.json({ cart });
   } catch (err) {
+    require('fs').appendFileSync('cart_error.log', '\n[' + new Date().toISOString() + '] ' + (err.stack || err.message));
     res.status(500).json({ error: err.message });
   }
 });
@@ -30,27 +31,30 @@ router.post('/add', protect, async (req, res) => {
       cart = await Cart.create({ user: req.user._id, items: [] });
     }
 
-    // Check if product with same zone already exists in cart
-    const existingItemIndex = cart.items.findIndex(
-      item => item.product.toString() === productId && item.zone === zone
-    );
+    const existingItem = cart.items.find(item => {
+      if (!item || !item.product) return false;
+      const pIdStr = String(item.product._id || item.product).trim();
+      return pIdStr === String(productId).trim();
+    });
 
-    if (existingItemIndex > -1) {
-      cart.items[existingItemIndex].quantity += quantity;
+    if (existingItem) {
+      await Cart.updateOne(
+        { _id: cart._id, 'items._id': existingItem._id },
+        { $inc: { 'items.$.quantity': Number(quantity) } }
+      );
     } else {
-      cart.items.push({
-        product: productId,
-        quantity,
-        zone,
-        priceAtAddition: product.pricePerSqFt
-      });
+      await Cart.updateOne(
+        { _id: cart._id },
+        { $push: { items: { product: productId, quantity: Number(quantity), zone, priceAtAddition: product.pricePerSqFt } } }
+      );
     }
 
-    await cart.save();
-    await cart.populate('items.product');
+    // Refetch clean cart to send back populated
+    const updatedCart = await Cart.findById(cart._id).populate('items.product');
     
-    res.json({ cart });
+    res.json({ cart: updatedCart });
   } catch (err) {
+    console.error('Cart add error:', err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -67,6 +71,7 @@ router.delete('/remove/:itemId', protect, async (req, res) => {
 
     res.json({ cart });
   } catch (err) {
+    require('fs').appendFileSync('cart_error.log', '\n[' + new Date().toISOString() + '] ' + (err.stack || err.message));
     res.status(500).json({ error: err.message });
   }
 });
@@ -81,6 +86,7 @@ router.delete('/clear', protect, async (req, res) => {
     }
     res.json({ message: 'Cart cleared', cart });
   } catch (err) {
+    require('fs').appendFileSync('cart_error.log', '\n[' + new Date().toISOString() + '] ' + (err.stack || err.message));
     res.status(500).json({ error: err.message });
   }
 });
@@ -103,6 +109,7 @@ router.patch('/update/:itemId', protect, async (req, res) => {
 
     res.json({ cart });
   } catch (err) {
+    require('fs').appendFileSync('cart_error.log', '\n[' + new Date().toISOString() + '] ' + (err.stack || err.message));
     res.status(500).json({ error: err.message });
   }
 });

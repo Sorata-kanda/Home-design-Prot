@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { BarChart3, Package, Users, MessageSquare, Plus, Edit2, Trash2, Check, X, Upload, RefreshCw, TrendingUp, Clock } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { adminAPI, productsAPI, quotesAPI, ordersAPI } from '../utils/api';
+import OrderDetailsModal from '../components/shared/OrderDetailsModal';
 
 const TABS = ['Dashboard', 'Products', 'Quotes', 'Orders', 'Users'];
 const CATEGORIES = ['marble', 'gwalior_stone', 'moca_crema', 'white_stone', 'moulding', 'column', 'limestone', 'granite', 'other'];
@@ -23,6 +24,7 @@ const emptyProduct = {
 
 export default function AdminPage() {
   const [tab, setTab] = useState('Dashboard');
+  const [selectedOrder, setSelectedOrder] = useState(null);
   const [showProductForm, setShowProductForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [productForm, setProductForm] = useState(emptyProduct);
@@ -314,9 +316,9 @@ export default function AdminPage() {
                 <div key={order._id} className="card" style={{ padding:'1.25rem' }}>
                   <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'0.875rem', flexWrap:'wrap', gap:'0.5rem' }}>
                     <div>
-                      <p style={{ fontWeight:600, margin:0, color:'var(--charcoal)', fontSize:'1rem' }}>{order.contactName}</p>
+                      <p style={{ fontWeight:600, margin:0, color:'var(--charcoal)', fontSize:'1.125rem' }}>Order #{order.orderNumber || order.transactionId?.substring(0,8) || order._id.substring(0,8)}</p>
                       <p style={{ margin:'2px 0 0', fontSize:'0.875rem', color:'var(--charcoal-light)' }}>
-                        📱 {order.contactPhone} · {order.shippingAddress?.city}
+                        👤 {order.contactName} · 📱 {order.contactPhone}
                       </p>
                     </div>
                     <div style={{ display:'flex', gap:8, alignItems:'center' }}>
@@ -325,24 +327,28 @@ export default function AdminPage() {
                     </div>
                   </div>
 
-                  <div style={{ marginBottom:'0.875rem', fontSize:'0.8125rem', color:'var(--charcoal-light)', background:'var(--cream)', padding:'0.75rem', borderRadius:8 }}>
-                    <strong>Shipping Address:</strong> {order.shippingAddress?.street}, {order.shippingAddress?.city}, {order.shippingAddress?.state}, {order.shippingAddress?.pincode}
+                  {/* Condensed item images */}
+                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.5rem', marginBottom: '1rem' }}>
+                    {order.lineItems?.slice(0, 5).map((item, idx) => (
+                       <img 
+                        key={idx}
+                        src={item.product?.textureImage?.url || item.product?.thumbnailImage?.url} 
+                        alt={item.productName} 
+                        title={item.productName}
+                        style={{ width:32, height:32, borderRadius:6, objectFit:'cover', border: '1px solid var(--border)' }}
+                        onError={e => { e.target.style.display='none'; }} 
+                      />
+                    ))}
+                    {order.lineItems?.length > 5 && (
+                      <div style={{ width:32, height:32, borderRadius:6, background:'var(--cream)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'0.75rem', color:'var(--charcoal-light)', border: '1px solid var(--border)' }}>
+                        +{order.lineItems.length - 5}
+                      </div>
+                    )}
                   </div>
-
-                  {order.lineItems?.length > 0 && (
-                    <div style={{ marginBottom:'0.875rem' }}>
-                      {order.lineItems.map((item, i) => (
-                        <span key={i} style={{ display:'inline-block', padding:'0.2rem 0.625rem', background:'var(--cream)', borderRadius:20, fontSize:'0.75rem', color:'var(--charcoal-light)', marginRight:6, marginBottom:4 }}>
-                          {item.productName} ({item.zone}, {item.estimatedArea} sq.ft)
-                        </span>
-                      ))}
-                    </div>
-                  )}
-
-                  <div style={{ fontSize:'0.75rem', color:'var(--charcoal-light)', marginBottom:'0.5rem' }}>
-                    <Clock size={11} style={{ verticalAlign:'middle' }} /> {new Date(order.createdAt).toLocaleDateString('en-IN')}
-                    {' · TXN: '}{order.transactionId || 'N/A'}
-                  </div>
+                  
+                  <button onClick={() => setSelectedOrder(order)} className="btn btn-secondary btn-sm" style={{ alignSelf: 'flex-start', marginTop: '0.5rem', padding: '0.4rem 1.25rem' }}>
+                    View Order Details
+                  </button>
                   
                   {/* Fulfillment toggles */}
                   <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap', marginTop:'1rem', paddingTop:'1rem', borderTop:'1px solid var(--border)' }}>
@@ -387,6 +393,8 @@ export default function AdminPage() {
           </div>
         )}
       </div>
+
+      {selectedOrder && <OrderDetailsModal order={selectedOrder} onClose={() => setSelectedOrder(null)} />}
 
       {/* Product Form Modal */}
       {showProductForm && (

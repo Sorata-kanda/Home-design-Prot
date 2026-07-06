@@ -97,7 +97,7 @@ export default function CartDrawer({ open, onClose }) {
                   <div style={{ flex:1 }}>
                     <h4 style={{ margin:'0 0 4px', fontSize:'1rem' }}>{item.product?.name}</h4>
                     <p style={{ margin:'0 0 8px', fontSize:'0.75rem', color:'var(--charcoal-light)' }}>
-                      Zone: {item.zone} • ₹{item.priceAtAddition.toLocaleString('en-IN')}/sq.ft
+                      ₹{item.priceAtAddition.toLocaleString('en-IN')}/sq.ft
                     </p>
                     <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
                       <div style={{ display:'flex', alignItems:'center', border:'1px solid var(--border)', borderRadius:4 }}>

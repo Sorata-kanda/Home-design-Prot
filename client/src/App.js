@@ -37,6 +37,9 @@ function AppRoutes() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/view/:token" element={<SharedRenderPage />} />
+        <Route path="/render/:id" element={
+          <ProtectedRoute><SharedRenderPage /></ProtectedRoute>
+        } />
         <Route path="/dashboard" element={
           <ProtectedRoute><DashboardPage /></ProtectedRoute>
         } />
