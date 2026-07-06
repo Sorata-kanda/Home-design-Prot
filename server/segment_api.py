@@ -11,6 +11,7 @@ import numpy as np
 import torch
 import urllib.request
 import tempfile
+import gc
 from PIL import Image
 from transformers import SegformerForSemanticSegmentation, SegformerImageProcessor
 from fastapi import FastAPI, HTTPException
@@ -36,6 +37,8 @@ print(f"[Segmentation] Pre-loading SegFormer model '{SEG_MODEL}' on {DEVICE}..."
 PROCESSOR = SegformerImageProcessor.from_pretrained(SEG_MODEL, local_files_only=False)
 MODEL     = SegformerForSemanticSegmentation.from_pretrained(SEG_MODEL, local_files_only=False)
 MODEL.eval().to(DEVICE)
+if DEVICE == "cuda":
+    MODEL = MODEL.half()
 print("[Segmentation] Model pre-loaded successfully!")
 
 app = FastAPI(title="Arteffects Local AI API")
@@ -97,6 +100,8 @@ def get_segmentation_map(img_bgr):
 
     pil_img = Image.fromarray(cv2.cvtColor(img_seg, cv2.COLOR_BGR2RGB))
     inputs  = PROCESSOR(images=pil_img, return_tensors="pt").to(DEVICE)
+    if DEVICE == "cuda":
+        inputs["pixel_values"] = inputs["pixel_values"].half()
 
     with torch.no_grad():
         logits = MODEL(**inputs).logits
@@ -268,7 +273,13 @@ def run_texture_mapping(img_bgr, mask, texture_path):
     full_tiled_bgr[y_min:y_max+1, x_min:x_max+1] = mapped_bgr
 
     # Convert to RGB PIL Image so it matches SD output type for composite()
-    return Image.fromarray(cv2.cvtColor(full_tiled_bgr, cv2.COLOR_BGR2RGB))
+    res = Image.fromarray(cv2.cvtColor(full_tiled_bgr, cv2.COLOR_BGR2RGB))
+
+    # Free heavy intermediate arrays
+    del tiled, tiled_cropped, orig_crop, mask_crop, orig_lab, tex_lab, full_tiled_bgr
+    gc.collect()
+
+    return res
 
 
 @app.post("/generate")
@@ -284,12 +295,22 @@ def generate_endpoint(req: GenerateRequest):
             raise HTTPException(status_code=400, detail=f"Failed to load base image: {str(e)}")
 
         start_time = time.time()
-        
         current_img = img.copy()
 
+        print("[Segmentation] Running global inference map once...")
+        global_pred, global_h, global_w = get_segmentation_map(img)
+        downloaded_textures = {}
+
         for ap in req.applied_zones:
-            # Run local pipeline
-            mask = run_segmentation_for_mask(img, ap.zone)
+            # 1. Algorithmic Refactor: Extract mask from global_pred instead of re-running inference
+            try:
+                zone_id = next(k for k, v in ADE20K_ZONES.items() if v == ap.zone)
+            except StopIteration:
+                zone_id = 0
+            
+            mask = ((global_pred == zone_id).astype(np.uint8) * 255)
+            pct = np.sum(mask > 0) / (global_h * global_w) * 100
+            print(f"    {ap.zone} detected: {pct:.1f}% of image")
             
             # --- Wainscoting Hack ---
             if req.preset == "wainscoting" and ap.zone == "wall":
@@ -306,7 +327,10 @@ def generate_endpoint(req: GenerateRequest):
                 continue
             
             try:
-                if ap.texture_image_path.startswith("http://") or ap.texture_image_path.startswith("https://"):
+                if ap.texture_image_path in downloaded_textures:
+                    print(f"[Loader] Reusing cached texture: {ap.texture_image_path}")
+                    texture_path = downloaded_textures[ap.texture_image_path]
+                elif ap.texture_image_path.startswith("http://") or ap.texture_image_path.startswith("https://"):
                     print(f"[Loader] Downloading remote texture: {ap.texture_image_path}")
                     fd, temp_tex = tempfile.mkstemp(suffix=".jpg")
                     try:
@@ -319,6 +343,7 @@ def generate_endpoint(req: GenerateRequest):
                             out_file.write(response.read())
                         texture_path = temp_tex
                         temp_tex_files.append(temp_tex)
+                        downloaded_textures[ap.texture_image_path] = temp_tex
                     finally:
                         os.close(fd)
                 else:
