@@ -192,13 +192,7 @@ export default function VisualizerPage() {
   };
 
   return (
-    <div style={{ 
-      display: 'flex', flexDirection: 'column', 
-      minHeight:'calc(100vh - 64px)', 
-      height: step === 2 ? 'calc(100vh - 64px)' : 'auto',
-      background:'var(--cream)', 
-      overflow: step === 2 ? 'hidden' : 'auto' 
-    }}>
+    <div className={`visualizer-page-wrapper ${step === 2 ? 'locked' : ''}`}>
       {/* Progress bar */}
       <div style={{ flexShrink: 0, background:'var(--warm-white)', borderBottom:'1px solid var(--border)', padding:'0.75rem 0' }}>
         <div className="container">

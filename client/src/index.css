@@ -185,6 +185,27 @@ label {
   display: inline-block !important;
 }
 
+.visualizer-page-wrapper {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100vh - 64px);
+  height: auto;
+  background: var(--cream);
+  overflow: auto;
+}
+
+.visualizer-page-wrapper.locked {
+  height: calc(100vh - 64px);
+  overflow: hidden;
+}
+
+@media (max-width: 768px) {
+  .visualizer-page-wrapper.locked {
+    height: auto;
+    overflow: visible;
+  }
+}
+
 .visualizer-container {
   display: grid;
   grid-template-columns: 1fr 360px;
