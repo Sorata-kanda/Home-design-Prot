@@ -14,6 +14,7 @@ AI-powered room visualizer for the DSYN Luxury stone & moulding website. Lets cl
 | Image storage | Cloudinary |
 | Local AI & Mapping | FastAPI, PyTorch, SegFormer, OpenCV (LAB Color Space) |
 | Authentication | Google OAuth 2.0 & JWT with Resend Email OTP |
+| Payments | Razorpay SDK & Secure API Integration |
 
 ---
 
@@ -108,6 +109,10 @@ GOOGLE_CLIENT_ID=your_google_client_id_here.apps.googleusercontent.com
 # Resend API Key for Email OTP Verification
 RESEND_API_KEY=re_your_api_key_here
 
+# Razorpay Keys
+RAZORPAY_KEY_ID=rzp_test_yourkey
+RAZORPAY_KEY_SECRET=your_razorpay_secret
+
 # AI Fallback Rendering APIs (Required for full pipeline)
 STABILITY_API_KEY=your_stability_key_here
 REPLICATE_API_TOKEN=your_replicate_token_here
@@ -193,8 +198,9 @@ The visualizer uses a highly optimized hybrid **SegFormer (Ade20k) + OpenCV LAB 
 2. **Select** — choose zone (floor/wall/ceiling/pillar/etc.) then product from live inventory
 3. **Presets** — one-click neoclassical transformations: Ionic columns, cornice, wainscoting
 4. **Generate** — AI applies materials in seconds
-5. **Download** — HD watermarked render with DSYN Luxury branding
-6. **Quote** — pre-filled quote form with selected SKUs, area estimator, total
+5. **Cart & Checkout** — add selected materials to a persistent cart and securely pay via **Razorpay** checkout
+6. **Download** — HD watermarked render with DSYN Luxury branding
+7. **Quote** — pre-filled quote form with selected SKUs, area estimator, total
 
 ### Admin Panel (`/admin`)
 - Dashboard with stats (users, products, renders, new quotes). Queries optimized with `.lean()`.
@@ -321,6 +327,8 @@ Each quote includes: contact details, city, selected SKUs with area estimates, p
 | `CLOUDINARY_API_SECRET` | Yes | Cloudinary API secret |
 | `GOOGLE_CLIENT_ID` | Yes | Google Developer Console OAuth Client ID |
 | `RESEND_API_KEY` | Yes | Resend API Key for Email OTP Verification |
+| `RAZORPAY_KEY_ID` | Yes | Razorpay Gateway Key ID |
+| `RAZORPAY_KEY_SECRET`| Yes | Razorpay Gateway Key Secret |
 | `STABILITY_API_KEY` | No | Required if using the SDXL fallback pipeline |
 | `REPLICATE_API_TOKEN` | No | Required if using the Replicate fallback pipeline |
 | `PYTHON_API_URL` | No | Python microservice URL (default: `http://localhost:8000`) |
