@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Menu, X, Layers, LogOut, User, Settings, ShoppingCart, Sun, Moon } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -15,6 +15,23 @@ export default function Navbar() {
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
+  const [showNavbar, setShowNavbar] = useState(true);
+  const [lastScrollY, setLastScrollY] = useState(0);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      // Show if scrolling up or very close to top, hide if scrolling down past 60px
+      if (currentScrollY > lastScrollY && currentScrollY > 60) {
+        setShowNavbar(false);
+      } else {
+        setShowNavbar(true);
+      }
+      setLastScrollY(currentScrollY);
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [lastScrollY]);
 
   const { data: cartData } = useQuery({
     queryKey: ['cart'],
@@ -34,11 +51,12 @@ export default function Navbar() {
 
   return (
     <nav style={{
-      position: 'sticky', top: 0, zIndex: 100,
+      position: 'sticky', top: showNavbar ? 0 : '-70px', zIndex: 100,
       background: 'rgba(var(--cream-rgb), 0.95)',
       backdropFilter: 'blur(12px)',
       borderBottom: '1px solid var(--border)',
-      fontFamily: 'var(--font-body)'
+      fontFamily: 'var(--font-body)',
+      transition: 'top 0.3s ease-in-out'
     }}>
       <div className="container" style={{ display:'flex', alignItems:'center', justifyContent:'space-between', height:'64px' }}>
         {/* Logo */}
