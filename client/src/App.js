@@ -29,25 +29,27 @@ function AppRoutes() {
   return (
     <>
       <Navbar />
-      <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/visualizer" element={
-          <ProtectedRoute><VisualizerPage /></ProtectedRoute>
-        } />
-        <Route path="/products" element={<ProductsPage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
-        <Route path="/view/:token" element={<SharedRenderPage />} />
-        <Route path="/render/:id" element={
-          <ProtectedRoute><SharedRenderPage /></ProtectedRoute>
-        } />
-        <Route path="/dashboard" element={
-          <ProtectedRoute><DashboardPage /></ProtectedRoute>
-        } />
-        <Route path="/admin" element={
-          <ProtectedRoute adminOnly><AdminPage /></ProtectedRoute>
-        } />
-      </Routes>
+      <div style={{ paddingTop: '64px', display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/visualizer" element={
+            <ProtectedRoute><VisualizerPage /></ProtectedRoute>
+          } />
+          <Route path="/products" element={<ProductsPage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+          <Route path="/view/:token" element={<SharedRenderPage />} />
+          <Route path="/render/:id" element={
+            <ProtectedRoute><SharedRenderPage /></ProtectedRoute>
+          } />
+          <Route path="/dashboard" element={
+            <ProtectedRoute><DashboardPage /></ProtectedRoute>
+          } />
+          <Route path="/admin" element={
+            <ProtectedRoute adminOnly><AdminPage /></ProtectedRoute>
+          } />
+        </Routes>
+      </div>
     </>
   );
 }

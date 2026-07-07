@@ -51,7 +51,7 @@ export default function Navbar() {
 
   return (
     <nav style={{
-      position: 'sticky', top: showNavbar ? 0 : '-70px', zIndex: 100,
+      position: 'fixed', top: showNavbar ? 0 : '-70px', left: 0, right: 0, zIndex: 1000, width: '100%',
       background: 'rgba(var(--cream-rgb), 0.95)',
       backdropFilter: 'blur(12px)',
       borderBottom: '1px solid var(--border)',
