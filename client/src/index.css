@@ -9,11 +9,11 @@
   --stone-dark: #5C4A30;
   --cream: #FAF4E6;
   --cream-rgb: 250, 244, 230;
-  --warm-white: #EFE8D6;
+  --warm-white: #FCFAF4;
   --charcoal: #2C2420;
   --charcoal-bg: #2C2420;
   --charcoal-light: #5C5048;
-  --border: rgba(139, 115, 85, 0.25);
+  --border: rgba(139, 115, 85, 0.15);
   --border-strong: rgba(139, 115, 85, 0.5);
   --shadow-sm: 0 1px 3px rgba(44, 36, 32, 0.08);
   --shadow-md: 0 4px 16px rgba(44, 36, 32, 0.12);
