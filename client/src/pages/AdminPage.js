@@ -35,12 +35,18 @@ export default function AdminPage() {
   const thumbInputRef = useRef();
   const queryClient = useQueryClient();
 
-  // Queries
-  const { data: dashData } = useQuery({ queryKey: ['admin-dash'], queryFn: () => adminAPI.dashboard().then(r => r.data), enabled: tab === 'Dashboard' });
-  const { data: productsData } = useQuery({ queryKey: ['admin-products'], queryFn: () => productsAPI.getAll({}).then(r => r.data), enabled: tab === 'Products' });
-  const { data: quotesData } = useQuery({ queryKey: ['admin-quotes'], queryFn: () => quotesAPI.getAll({}).then(r => r.data), enabled: tab === 'Quotes' });
-  const { data: ordersData } = useQuery({ queryKey: ['admin-orders'], queryFn: () => ordersAPI.getAll().then(r => r.data), enabled: tab === 'Orders' });
-  const { data: usersData } = useQuery({ queryKey: ['admin-users'], queryFn: () => adminAPI.users().then(r => r.data), enabled: tab === 'Users' });
+  // Queries (Prefetched in background on load)
+  const { data: dashData, isLoading: dashLoading } = useQuery({ queryKey: ['admin-dash'], queryFn: () => adminAPI.dashboard().then(r => r.data) });
+  const { data: productsData, isLoading: productsLoading } = useQuery({ queryKey: ['admin-products'], queryFn: () => productsAPI.getAll({}).then(r => r.data) });
+  const { data: quotesData, isLoading: quotesLoading } = useQuery({ queryKey: ['admin-quotes'], queryFn: () => quotesAPI.getAll({}).then(r => r.data) });
+  const { data: ordersData, isLoading: ordersLoading } = useQuery({ queryKey: ['admin-orders'], queryFn: () => ordersAPI.getAll().then(r => r.data) });
+  const { data: usersData, isLoading: usersLoading } = useQuery({ queryKey: ['admin-users'], queryFn: () => adminAPI.users().then(r => r.data) });
+
+  const LoadingView = () => (
+    <div style={{ display:'flex', justifyContent:'center', padding:'4rem' }}>
+      <div className="spinner" style={{ width:36, height:36 }} />
+    </div>
+  );
 
   // Mutations
   const seedMutation = useMutation({
@@ -151,7 +157,7 @@ export default function AdminPage() {
         {/* DASHBOARD TAB */}
         {tab === 'Dashboard' && (
           <div>
-            {dashData && (
+            {dashLoading ? <LoadingView /> : dashData && (
               <>
                 <div style={{ display:'grid', gridTemplateColumns:'repeat(2, 1fr)', gap:'0.75rem', marginBottom:'2rem' }}>
                   {[
@@ -212,8 +218,9 @@ export default function AdminPage() {
               </div>
             </div>
 
-            <div style={{ display:'grid', gap:'0.75rem' }}>
-              {productsData?.products?.map(product => (
+            {productsLoading ? <LoadingView /> : (
+              <div style={{ display:'grid', gap:'0.75rem' }}>
+                {productsData?.products?.map(product => (
                 <div key={product._id} style={{
                   display:'flex', alignItems:'center', gap:'0.75rem', padding:'0.75rem',
                   background:'var(--warm-white)', borderRadius:12, border:'1px solid var(--border)', overflow:'hidden'
@@ -243,7 +250,8 @@ export default function AdminPage() {
                   </div>
                 </div>
               ))}
-            </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -251,8 +259,9 @@ export default function AdminPage() {
         {tab === 'Quotes' && (
           <div>
             <h3 style={{ marginBottom:'1.5rem' }}>Quote requests ({quotesData?.total || 0})</h3>
-            <div style={{ display:'grid', gap:'1rem' }}>
-              {quotesData?.quotes?.map(quote => (
+            {quotesLoading ? <LoadingView /> : (
+              <div style={{ display:'grid', gap:'1rem' }}>
+                {quotesData?.quotes?.map(quote => (
                 <div key={quote._id} className="card" style={{ padding:'1.25rem' }}>
                   <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'0.875rem', flexWrap:'wrap', gap:'0.5rem' }}>
                     <div>
@@ -300,10 +309,11 @@ export default function AdminPage() {
                   </div>
                 </div>
               ))}
-              {quotesData?.quotes?.length === 0 && (
-                <div style={{ textAlign:'center', padding:'3rem', color:'var(--charcoal-light)' }}>No quote requests yet</div>
-              )}
-            </div>
+                {quotesData?.quotes?.length === 0 && (
+                  <div style={{ textAlign:'center', padding:'3rem', color:'var(--charcoal-light)' }}>No quote requests yet</div>
+                )}
+              </div>
+            )}
           </div>
         )}
 
@@ -311,8 +321,9 @@ export default function AdminPage() {
         {tab === 'Orders' && (
           <div>
             <h3 style={{ marginBottom:'1.5rem' }}>E-Commerce Orders ({ordersData?.orders?.length || 0})</h3>
-            <div style={{ display:'grid', gap:'1rem' }}>
-              {ordersData?.orders?.map(order => (
+            {ordersLoading ? <LoadingView /> : (
+              <div style={{ display:'grid', gap:'1rem' }}>
+                {ordersData?.orders?.map(order => (
                 <div key={order._id} className="card" style={{ padding:'1.25rem' }}>
                   <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'0.875rem', flexWrap:'wrap', gap:'0.5rem' }}>
                     <div>
@@ -363,10 +374,11 @@ export default function AdminPage() {
                   </div>
                 </div>
               ))}
-              {ordersData?.orders?.length === 0 && (
-                <div style={{ textAlign:'center', padding:'3rem', color:'var(--charcoal-light)' }}>No e-commerce orders yet</div>
-              )}
-            </div>
+                {ordersData?.orders?.length === 0 && (
+                  <div style={{ textAlign:'center', padding:'3rem', color:'var(--charcoal-light)' }}>No e-commerce orders yet</div>
+                )}
+              </div>
+            )}
           </div>
         )}
 
@@ -374,8 +386,9 @@ export default function AdminPage() {
         {tab === 'Users' && (
           <div>
             <h3 style={{ marginBottom:'1.5rem' }}>Registered users ({usersData?.users?.length || 0})</h3>
-            <div style={{ display:'grid', gap:'0.625rem' }}>
-              {usersData?.users?.map(user => (
+            {usersLoading ? <LoadingView /> : (
+              <div style={{ display:'grid', gap:'0.625rem' }}>
+                {usersData?.users?.map(user => (
                 <div key={user._id} style={{ display:'flex', alignItems:'center', gap:'0.75rem', padding:'0.75rem', background:'var(--warm-white)', borderRadius:12, border:'1px solid var(--border)', overflow:'hidden' }}>
                   <div style={{ width:36, height:36, background:'rgba(201,168,76,0.15)', borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', fontWeight:600, fontSize:'0.875rem', color:'var(--gold-dark)', flexShrink:0 }}>
                     {user.name.split(' ').map(n => n[0]).join('').slice(0,2).toUpperCase()}
@@ -389,7 +402,8 @@ export default function AdminPage() {
                   </div>
                 </div>
               ))}
-            </div>
+              </div>
+            )}
           </div>
         )}
       </div>
