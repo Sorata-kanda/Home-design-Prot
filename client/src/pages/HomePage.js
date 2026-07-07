@@ -50,6 +50,7 @@ export default function HomePage() {
           position: 'relative', 
           zIndex: 10,
           padding: '2rem',
+          marginTop: '64px', // Optically center below navbar
           maxWidth: '800px',
           width: '100%',
           textAlign: 'center',
