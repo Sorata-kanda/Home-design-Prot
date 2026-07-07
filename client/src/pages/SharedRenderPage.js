@@ -59,7 +59,7 @@ export default function SharedRenderPage() {
   return (
     <div style={{ minHeight:'calc(100vh - 64px)', background:'var(--cream)' }}>
       {/* Hero banner */}
-      <div style={{ background:'var(--charcoal)', color:'white', padding:'2rem 0' }}>
+      <div style={{ background:'var(--charcoal-bg)', color:'white', padding:'2rem 0' }}>
         <div className="container" style={{ textAlign:'center' }}>
           <p style={{ color:'var(--gold-light)', fontSize:'0.8125rem', fontWeight:600, letterSpacing:'0.08em', textTransform:'uppercase', marginBottom:8 }}>
             Stratum Room Visualization
@@ -72,7 +72,7 @@ export default function SharedRenderPage() {
         {/* Before / After */}
         <div className="grid-before-after" style={{ marginBottom:'2rem' }}>
           <div style={{ borderRadius:16, overflow:'hidden', border:'1px solid var(--border)', display:'flex', flexDirection:'column' }}>
-            <div style={{ padding:'0.5rem 1rem', background:'var(--charcoal)', color:'white', fontSize:'0.8125rem', fontWeight:500 }}>Before</div>
+            <div style={{ padding:'0.5rem 1rem', background:'var(--charcoal-bg)', color:'white', fontSize:'0.8125rem', fontWeight:500 }}>Before</div>
             <img src={render.originalPhoto?.url} alt="Original room" style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }} />
           </div>
           <div style={{ borderRadius:16, overflow:'hidden', border:'2px solid var(--gold)', display:'flex', flexDirection:'column' }}>

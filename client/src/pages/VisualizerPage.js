@@ -7,6 +7,7 @@ import { visualizerAPI, productsAPI, rendersAPI, cartAPI } from '../utils/api';
 import QuoteModal from '../components/visualizer/QuoteModal';
 import CheckoutModal from '../components/visualizer/CheckoutModal';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 
 const PRESETS = [
   { id: 'ionic_columns', label: 'Ionic Columns', desc: 'Grand entrance columns', icon: '🏛️' },
@@ -36,6 +37,7 @@ const ZONE_COLORS = {
 export default function VisualizerPage() {
   const queryClient = useQueryClient();
   const { isExistingCustomer } = useAuth();
+  const { theme } = useTheme();
   const [step, setStep] = useState(1); // 1=upload, 2=select, 3=result
   const [photo, setPhoto] = useState(null);
   const [uploadedPhoto, setUploadedPhoto] = useState(null);
@@ -227,6 +229,27 @@ export default function VisualizerPage() {
     }
   };
 
+  const glassButtonStyle = {
+    background: theme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.4)',
+    backdropFilter: 'blur(16px)',
+    WebkitBackdropFilter: 'blur(16px)',
+    border: theme === 'dark' ? '1px solid rgba(255, 255, 255, 0.15)' : '1px solid rgba(255, 255, 255, 0.6)',
+    boxShadow: '0 4px 30px rgba(0, 0, 0, 0.1)',
+    transition: 'all 0.3s ease',
+    color: 'var(--charcoal)'
+  };
+
+  const glassPrimaryButtonStyle = {
+    background: 'rgba(201, 168, 76, 0.85)',
+    backdropFilter: 'blur(16px)',
+    WebkitBackdropFilter: 'blur(16px)',
+    border: '1px solid rgba(255, 255, 255, 0.4)',
+    boxShadow: '0 4px 24px rgba(201, 168, 76, 0.4)',
+    transition: 'all 0.3s ease',
+    color: 'var(--charcoal)',
+    fontWeight: 600
+  };
+
   return (
     <div className={`visualizer-page-wrapper ${step === 2 ? 'locked' : ''}`}>
       {/* Progress bar */}
@@ -241,7 +264,7 @@ export default function VisualizerPage() {
               <div key={n} style={{ display:'flex', alignItems:'center', gap:8, opacity: step >= n ? 1 : 0.4 }}>
                 <div style={{
                   width:28, height:28, borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center',
-                  background: step > n ? 'var(--gold)' : step === n ? 'var(--charcoal)' : 'transparent',
+                  background: step > n ? 'var(--gold)' : step === n ? 'var(--charcoal-bg)' : 'transparent',
                   border: step <= n ? '1.5px solid var(--border-strong)' : 'none',
                   fontSize:'0.8125rem', fontWeight:600,
                   color: step >= n ? 'white' : 'var(--charcoal-light)'
@@ -285,7 +308,16 @@ export default function VisualizerPage() {
                   {isDragActive ? 'Drop your photo here' : 'Drag & drop your room photo'}
                 </p>
                 <p style={{ marginBottom:'1.5rem' }}>or tap to choose from your gallery</p>
-                <button type="button" className="btn btn-primary">
+                <button type="button" className="btn btn-lg" style={glassButtonStyle}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.background = theme === 'dark' ? 'rgba(255, 255, 255, 0.2)' : 'rgba(255, 255, 255, 0.6)';
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.background = glassButtonStyle.background;
+                    e.currentTarget.style.transform = 'translateY(0)';
+                  }}
+                >
                   <Camera size={16} /> Choose photo
                 </button>
               </>
@@ -338,15 +370,22 @@ export default function VisualizerPage() {
                           display:'flex', alignItems:'center', gap:6,
                           pointerEvents:'auto', cursor:'pointer',
                           padding:'6px 12px', borderRadius:8,
-                          background: isActive ? 'var(--gold)' : 'rgba(255, 255, 255, 0.9)',
-                          border: `2px solid ${isActive ? 'white' : 'transparent'}`,
-                          backdropFilter:'blur(4px)',
+                          background: isActive ? 'var(--gold)' : (theme === 'dark' ? 'rgba(26,21,18,0.4)' : 'rgba(255,255,255,0.4)'),
+                          border: `1px solid ${isActive ? 'rgba(255,255,255,0.8)' : (theme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.5)')}`,
+                          backdropFilter:'blur(12px)',
+                          WebkitBackdropFilter:'blur(12px)',
                           transition:'all 0.2s',
                           transform: isActive ? 'scale(1.05)' : 'scale(1)',
                           boxShadow: isActive ? `0 0 16px rgba(201, 168, 76, 0.6)` : '0 4px 12px rgba(0,0,0,0.1)',
                           whiteSpace: 'nowrap'
                         }}
                         onClick={() => setActiveZone(zone.type)}
+                        onMouseEnter={e => {
+                          if (!isActive) e.currentTarget.style.background = theme === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.6)';
+                        }}
+                        onMouseLeave={e => {
+                          if (!isActive) e.currentTarget.style.background = theme === 'dark' ? 'rgba(26,21,18,0.4)' : 'rgba(255,255,255,0.4)';
+                        }}
                       >
                         <span style={{ 
                           fontSize:'0.75rem', 
@@ -558,7 +597,20 @@ export default function VisualizerPage() {
             {/* Generate button */}
             <div style={{ padding:'1rem 1.25rem', position:'sticky', bottom:0, background:'var(--warm-white)', borderTop:'1px solid var(--border-strong)' }}>
               <button onClick={handleGenerate} disabled={generating || segmenting || (selectedProducts.length === 0 && !activePreset)}
-                className="btn btn-primary btn-lg" style={{ width:'100%', justifyContent:'center' }}>
+                className="btn btn-lg" style={{ width:'100%', justifyContent:'center', ...glassPrimaryButtonStyle, opacity: (generating || segmenting || (selectedProducts.length === 0 && !activePreset)) ? 0.5 : 1 }}
+                onMouseEnter={e => {
+                  if (generating || segmenting || (selectedProducts.length === 0 && !activePreset)) return;
+                  e.currentTarget.style.background = 'rgba(201, 168, 76, 1)';
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.boxShadow = '0 6px 28px rgba(201, 168, 76, 0.6)';
+                }}
+                onMouseLeave={e => {
+                  if (generating || segmenting || (selectedProducts.length === 0 && !activePreset)) return;
+                  e.currentTarget.style.background = glassPrimaryButtonStyle.background;
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = glassPrimaryButtonStyle.boxShadow;
+                }}
+              >
                 {generating ? (
                   <><div className="spinner" style={{ width:18, height:18, borderWidth:2 }} /> Generating with AI…</>
                 ) : (
@@ -588,8 +640,8 @@ export default function VisualizerPage() {
 
           {/* Before / After */}
           <div className="grid-before-after" style={{ marginBottom:'1.5rem' }}>
-            <div style={{ borderRadius:16, overflow:'hidden', border:'1px solid var(--border)', display:'flex', flexDirection:'column' }}>
-              <div style={{ padding:'0.5rem 1rem', background:'var(--charcoal)', color:'white', fontSize:'0.8125rem', fontWeight:500 }}>Before</div>
+            <div style={{ borderRadius:12, overflow:'hidden', border:'1px solid var(--border)', display:'flex', flexDirection:'column' }}>
+              <div style={{ padding:'0.5rem 1rem', background:'var(--charcoal-bg)', color:'white', fontSize:'0.8125rem', fontWeight:500 }}>Before</div>
               <img src={photo} alt="Original room" style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }} />
             </div>
             <div style={{ borderRadius:16, overflow:'hidden', border:'2px solid var(--gold)', display:'flex', flexDirection:'column' }}>

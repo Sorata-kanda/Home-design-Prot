@@ -52,10 +52,10 @@ export default function ProductsPage() {
   return (
     <div style={{ minHeight:'calc(100vh - 64px)', background:'var(--cream)' }}>
       {/* Header */}
-      <div style={{ background:'var(--charcoal)', color:'white', padding:'3rem 0 2.5rem' }}>
+      <div style={{ background:'var(--charcoal-bg)', color:'white', padding:'3rem 0 2.5rem' }}>
         <div className="container">
           <h1 style={{ color:'var(--gold-light)', marginBottom:8 }}>Our Stone Collection</h1>
-          <p style={{ color:'rgba(255,255,255,0.6)', maxWidth:480 }}>
+          <p style={{ color:'white', opacity: 0.8, maxWidth:480 }}>
             Every product in our live inventory. Select any item in the visualizer to see it in your space.
           </p>
           <Link to="/visualizer" className="btn btn-primary" style={{ marginTop:'1.25rem' }}>
@@ -128,11 +128,6 @@ export default function ProductsPage() {
                       <span className="badge badge-stone">{product.finish}</span>
                       {product.isNeoClassicalPreset && <span className="badge badge-gold">Preset</span>}
                     </div>
-                    {product.applicableZones?.length > 0 && (
-                      <p style={{ fontSize:'0.75rem', color:'var(--charcoal-light)', margin:'0 0 0.875rem' }}>
-                        Zones: {product.applicableZones.join(', ')}
-                      </p>
-                    )}
                     <div style={{ display:'flex', gap:6 }}>
                       <Link to="/visualizer" className="btn btn-secondary btn-sm" style={{ flex:1, justifyContent:'center' }}>
                         <Wand2 size={14} /> Try in visualizer

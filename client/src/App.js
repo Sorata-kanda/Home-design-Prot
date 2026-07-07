@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ThemeProvider } from './context/ThemeContext';
 import Navbar from './components/shared/Navbar';
 import HomePage from './pages/HomePage';
 import VisualizerPage from './pages/VisualizerPage';
@@ -54,14 +55,16 @@ function AppRoutes() {
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <BrowserRouter>
-          <AppRoutes />
-          <Toaster position="top-center" toastOptions={{
-            style: { fontFamily: 'Inter, sans-serif', fontSize: '0.875rem', borderRadius: '8px' }
-          }} />
-        </BrowserRouter>
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <BrowserRouter>
+            <AppRoutes />
+            <Toaster position="top-center" toastOptions={{
+              style: { fontFamily: 'Inter, sans-serif', fontSize: '0.875rem', borderRadius: '8px' }
+            }} />
+          </BrowserRouter>
+        </AuthProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 }

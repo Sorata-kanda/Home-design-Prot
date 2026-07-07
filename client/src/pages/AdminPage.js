@@ -132,13 +132,13 @@ export default function AdminPage() {
   return (
     <div style={{ minHeight:'calc(100vh - 64px)', background:'var(--cream)', overflowX:'hidden' }}>
       {/* Admin header */}
-      <div style={{ background:'var(--charcoal)', color:'white', padding:'1.25rem 0' }}>
+      <div style={{ background:'var(--charcoal-bg)', color:'white', padding:'1.25rem 0' }}>
         <div className="container" style={{ display:'flex', flexDirection:'column', gap:'0.75rem' }}>
           <h2 style={{ color:'var(--gold-light)', margin:0, fontSize:'1.25rem' }}>Admin Panel</h2>
           <div style={{ display:'flex', gap:'0.5rem', overflowX:'auto', WebkitOverflowScrolling:'touch', paddingBottom:'2px' }}>
             {TABS.map(t => (
               <button key={t} onClick={() => setTab(t)} className="btn btn-sm"
-                style={{ background: tab === t ? 'var(--gold)' : 'transparent', color: tab === t ? 'var(--charcoal)' : 'rgba(255,255,255,0.7)', border: tab === t ? 'none' : '1px solid rgba(255,255,255,0.2)', whiteSpace:'nowrap', flexShrink:0 }}>
+                style={{ background: tab === t ? 'var(--gold)' : 'transparent', color: tab === t ? 'var(--charcoal-bg)' : 'rgba(255,255,255,0.7)', border: tab === t ? 'none' : '1px solid rgba(255,255,255,0.2)', whiteSpace:'nowrap', flexShrink:0 }}>
                 {t}
               </button>
             ))}
@@ -293,7 +293,7 @@ export default function AdminPage() {
                     {['new', 'contacted', 'quoted', 'won', 'lost'].map(s => (
                       <button key={s} onClick={() => quoteStatusMutation.mutate({ id: quote._id, status: s })}
                         className="btn btn-sm"
-                        style={{ background: quote.status === s ? 'var(--charcoal)' : 'transparent', color: quote.status === s ? 'white' : 'var(--charcoal-light)', border:'1px solid var(--border)', padding:'0.2rem 0.5rem', fontSize:'0.6875rem' }}>
+                        style={{ background: quote.status === s ? 'var(--charcoal-bg)' : 'transparent', color: quote.status === s ? 'white' : 'var(--charcoal-light)', border:'1px solid var(--border)', padding:'0.2rem 0.5rem', fontSize:'0.6875rem' }}>
                         {s}
                       </button>
                     ))}

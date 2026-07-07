@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Menu, X, Layers, LogOut, User, Settings, ShoppingCart } from 'lucide-react';
+import { Menu, X, Layers, LogOut, User, Settings, ShoppingCart, Sun, Moon } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 import { cartAPI } from '../../utils/api';
 import CartDrawer from './CartDrawer';
 
@@ -10,6 +11,7 @@ export default function Navbar() {
   const [open, setOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
   const { user, logout, isAdmin } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
@@ -33,7 +35,7 @@ export default function Navbar() {
   return (
     <nav style={{
       position: 'sticky', top: 0, zIndex: 100,
-      background: 'rgba(250, 248, 243, 0.95)',
+      background: 'rgba(var(--cream-rgb), 0.95)',
       backdropFilter: 'blur(12px)',
       borderBottom: '1px solid var(--border)',
       fontFamily: 'var(--font-body)'
@@ -49,7 +51,7 @@ export default function Navbar() {
               Stratum
             </span>
             <span style={{ fontFamily:'var(--font-body)', fontSize:'0.625rem', fontWeight:600, color:'var(--gold-dark)', letterSpacing:'0.05em', textTransform:'uppercase' }}>
-              by DSYN
+              by DSYN Luxury
             </span>
           </div>
         </Link>
@@ -77,6 +79,11 @@ export default function Navbar() {
 
         {/* Auth area */}
         <div style={{ display:'flex', alignItems:'center', gap:'0.75rem' }}>
+          
+          <button onClick={toggleTheme} className="btn btn-ghost btn-sm" title="Toggle theme">
+            {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+          </button>
+
           {user && (
             <button 
               className="btn btn-ghost btn-sm" 

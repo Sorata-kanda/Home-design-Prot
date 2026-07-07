@@ -8,8 +8,10 @@
   --stone-light: #D4C5A9;
   --stone-dark: #5C4A30;
   --cream: #FAF8F3;
+  --cream-rgb: 250, 248, 243;
   --warm-white: #FEFCF7;
   --charcoal: #2C2420;
+  --charcoal-bg: #2C2420;
   --charcoal-light: #5C5048;
   --border: rgba(139, 115, 85, 0.25);
   --border-strong: rgba(139, 115, 85, 0.5);
@@ -20,6 +22,20 @@
   --radius-lg: 16px;
   --font-display: 'Cormorant Garamond', Georgia, serif;
   --font-body: 'Inter', system-ui, sans-serif;
+}
+
+:root[data-theme="dark"] {
+  --cream: #1A1512;
+  --cream-rgb: 26, 21, 18;
+  --warm-white: #241D19;
+  --charcoal: #FEFCF7;
+  --charcoal-bg: #110E0C;
+  --charcoal-light: #AFA295;
+  --border: rgba(201, 168, 76, 0.15);
+  --border-strong: rgba(201, 168, 76, 0.3);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.6);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.8);
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -168,6 +184,17 @@ label {
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in-up {
+  animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.delay-100 { animation-delay: 100ms; }
+.delay-200 { animation-delay: 200ms; }
+.delay-300 { animation-delay: 300ms; }
 
 /* Toast overrides */
 .react-hot-toast { font-family: var(--font-body) !important; }

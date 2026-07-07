@@ -141,7 +141,7 @@ export default function CartDrawer({ open, onClose }) {
 
         {/* Footer */}
         {items.length > 0 && (
-          <div style={{ padding:'1.5rem', borderTop:'1px solid var(--border)', background:'white' }}>
+          <div style={{ padding:'1.5rem', borderTop:'1px solid var(--border)', background:'var(--cream)' }}>
             <div style={{ display:'flex', justifyContent:'space-between', marginBottom:'1.25rem', fontSize:'1.125rem', fontWeight:600 }}>
               <span>Subtotal</span>
               <span>₹{totalAmount.toLocaleString('en-IN')}</span>
