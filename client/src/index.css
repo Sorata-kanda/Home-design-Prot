@@ -339,8 +339,14 @@ label {
   gap: 0.875rem;
 }
 
+.form-grid-3 {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: 0.875rem;
+}
+
 @media (max-width: 560px) {
-  .form-grid-2 {
+  .form-grid-2, .form-grid-3 {
     grid-template-columns: 1fr;
   }
 }

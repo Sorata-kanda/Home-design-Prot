@@ -220,7 +220,7 @@ export default function CheckoutModal({ selectedProducts = [], renderId, onClose
               <label>Full Name *</label>
               <input type="text" value={form.contactName} onChange={e => setForm(f => ({ ...f, contactName: e.target.value }))} required />
             </div>
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'0.875rem', marginBottom:'0.875rem' }}>
+            <div className="form-grid-2" style={{ marginBottom:'0.875rem' }}>
               <div>
                 <label>Email *</label>
                 <input type="email" value={form.contactEmail} onChange={e => setForm(f => ({ ...f, contactEmail: e.target.value }))} required />
@@ -262,7 +262,7 @@ export default function CheckoutModal({ selectedProducts = [], renderId, onClose
               />
             </div>
 
-            <div style={{ display:'grid', gridTemplateColumns:'2fr 1fr 1fr', gap:'0.875rem', marginBottom:'1.5rem' }}>
+            <div className="form-grid-3" style={{ marginBottom:'1.5rem' }}>
               <div>
                 <label>City *</label>
                 <input type="text" value={form.shippingAddress.city} onChange={e => setForm(f => ({ ...f, shippingAddress: { ...f.shippingAddress, city: e.target.value } }))} required />
