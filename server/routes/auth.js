@@ -26,18 +26,13 @@ router.post("/facebook", async (req, res) => {
         );
         const { id, email, name } = fbRes.data;
 
-        if (!email) {
-            return res
-                .status(400)
-                .json({
-                    error: "Email not provided by Facebook account. Please use a different login method.",
-                });
-        }
+        // Use Facebook ID as fallback email if email not provided
+        const userEmail = email || `facebook_${id}@stratum.app`;
 
         // Find or create user
         let user = await User.findOne({ facebookId: id });
 
-        const isAdminEmail = email === process.env.ADMIN_EMAIL;
+        const isAdminEmail = userEmail === process.env.ADMIN_EMAIL;
 
         if (user) {
             // Auto-promote user to admin if their email now matches the ADMIN_EMAIL env var
@@ -47,7 +42,7 @@ router.post("/facebook", async (req, res) => {
             }
         } else {
             // Link to existing standard email account if it matches
-            user = await User.findOne({ email });
+            user = await User.findOne({ email: userEmail });
             if (user) {
                 user.facebookId = id;
                 user.isVerified = true; // Auto-verify linked accounts
@@ -59,7 +54,7 @@ router.post("/facebook", async (req, res) => {
                 // Create new account
                 user = await User.create({
                     name: name || "Facebook User",
-                    email,
+                    email: userEmail,
                     facebookId: id,
                     role: isAdminEmail ? "admin" : "client",
                     isVerified: true, // Facebook accounts are pre-verified

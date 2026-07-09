@@ -10,6 +10,58 @@ export default function LoginPage() {
     const { login, loginWithGoogle, loginWithFacebook } = useAuth();
     const navigate = useNavigate();
 
+    const handleGoogleCredentialResponse = async (response) => {
+        setLoading(true);
+        try {
+            const user = await loginWithGoogle(response.credential);
+            toast.success(`Welcome back, ${user.name.split(" ")[0]}!`);
+            navigate(user.role === "admin" ? "/admin" : "/visualizer");
+        } catch (err) {
+            toast.error(err.response?.data?.error || "Google Sign-in failed");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleFacebookLogin = () => {
+        if (!window.FB) {
+            toast.error("Facebook SDK not loaded");
+            return;
+        }
+
+        setLoading(true);
+        window.FB.login(
+            (response) => {
+                if (response.authResponse) {
+                    loginWithFacebook(response.authResponse.accessToken)
+                        .then((user) => {
+                            toast.success(
+                                `Welcome back, ${user.name.split(" ")[0]}!`,
+                            );
+                            navigate(
+                                user.role === "admin"
+                                    ? "/admin"
+                                    : "/visualizer",
+                            );
+                        })
+                        .catch((err) => {
+                            toast.error(
+                                err.response?.data?.error ||
+                                    "Facebook Sign-in failed",
+                            );
+                        })
+                        .finally(() => {
+                            setLoading(false);
+                        });
+                } else {
+                    setLoading(false);
+                    toast.error("Facebook login cancelled");
+                }
+            },
+            { scope: "public_profile" },
+        );
+    };
+
     useEffect(() => {
         let active = true;
 
@@ -79,57 +131,7 @@ export default function LoginPage() {
         return () => {
             active = false;
         };
-    }, []);
-
-    const handleGoogleCredentialResponse = async (response) => {
-        setLoading(true);
-        try {
-            const user = await loginWithGoogle(response.credential);
-            toast.success(`Welcome back, ${user.name.split(" ")[0]}!`);
-            navigate(user.role === "admin" ? "/admin" : "/visualizer");
-        } catch (err) {
-            toast.error(err.response?.data?.error || "Google Sign-in failed");
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleFacebookLogin = () => {
-        if (!window.FB) {
-            toast.error("Facebook SDK not loaded");
-            return;
-        }
-
-        setLoading(true);
-        window.FB.login(
-            async (response) => {
-                if (response.authResponse) {
-                    try {
-                        const user = await loginWithFacebook(
-                            response.authResponse.accessToken,
-                        );
-                        toast.success(
-                            `Welcome back, ${user.name.split(" ")[0]}!`,
-                        );
-                        navigate(
-                            user.role === "admin" ? "/admin" : "/visualizer",
-                        );
-                    } catch (err) {
-                        toast.error(
-                            err.response?.data?.error ||
-                                "Facebook Sign-in failed",
-                        );
-                    } finally {
-                        setLoading(false);
-                    }
-                } else {
-                    setLoading(false);
-                    toast.error("Facebook login cancelled");
-                }
-            },
-            { scope: "public_profile,email" },
-        );
-    };
+    }, [handleGoogleCredentialResponse]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
