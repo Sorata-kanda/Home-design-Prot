@@ -26,7 +26,7 @@ const quoteSchema = new mongoose.Schema({
   // Status
   status: {
     type: String,
-    enum: ['new', 'contacted', 'quoted', 'won', 'lost'],
+    enum: ['new', 'contacted', 'quoted', 'converted', 'closed', 'won', 'lost'],
     default: 'new'
   },
   

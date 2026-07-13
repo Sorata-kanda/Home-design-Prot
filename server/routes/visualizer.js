@@ -129,6 +129,23 @@ router.post('/generate', optionalAuth, async (req, res) => {
       shareToken
     });
 
+    // Notify user that render is completed
+    const targetUserId = req.user?._id || userId || null;
+    if (targetUserId) {
+        try {
+            const { createNotification } = require("../utils/notifications");
+            await createNotification({
+                user: targetUserId,
+                title: "AI Render Ready",
+                message: `Your room visualization render is complete.`,
+                type: "render_completed",
+                link: "/dashboard"
+            });
+        } catch (e) {
+            console.error("Render notification error:", e);
+        }
+    }
+
     res.json({
       renderId: render._id,
       shareToken: render.shareToken,

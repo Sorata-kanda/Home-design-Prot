@@ -95,8 +95,23 @@ export const quotesAPI = {
 // Admin
 export const adminAPI = {
     dashboard: () => api.get("/admin/dashboard"),
-    users: () => api.get("/admin/users"),
+    analytics: () => api.get("/admin/analytics"),
+    users: (params) => api.get("/admin/users", { params }),
+    updateUser: (id, data) => api.patch(`/admin/users/${id}`, data),
+    deleteUser: (id) => api.delete(`/admin/users/${id}`),
+    allRenders: (params) => api.get("/admin/renders", { params }),
+    deleteRender: (id) => api.delete(`/admin/renders/${id}`),
+    categories: () => api.get("/admin/categories"),
     seed: () => api.post("/admin/seed"),
+};
+
+// Coupons (Admin)
+export const couponsAPI = {
+    getAll: () => api.get("/admin/coupons"),
+    validate: (code) => api.get("/orders/coupon/validate", { params: { code } }),
+    create: (data) => api.post("/admin/coupons", data),
+    update: (id, data) => api.patch(`/admin/coupons/${id}`, data),
+    delete: (id) => api.delete(`/admin/coupons/${id}`),
 };
 
 // Orders
@@ -117,6 +132,14 @@ export const cartAPI = {
     remove: (id) => api.delete(`/cart/remove/${id}`),
     update: (id, data) => api.patch(`/cart/update/${id}`, data),
     clear: () => api.delete("/cart/clear"),
+};
+
+// Notifications
+export const notificationsAPI = {
+    getAll: () => api.get("/notifications"),
+    readAll: () => api.patch("/notifications/read-all"),
+    read: (id) => api.patch(`/notifications/${id}/read`),
+    clear: () => api.delete("/notifications/clear"),
 };
 
 export default api;

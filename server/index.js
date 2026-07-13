@@ -63,6 +63,7 @@ app.use('/api/admin', require('./routes/admin'));
 app.use('/api/visualizer', require('./routes/visualizer'));
 app.use('/api/orders', require('./routes/orders'));
 app.use('/api/cart', require('./routes/cart'));
+app.use('/api/notifications', require('./routes/notifications'));
 
 // Health check
 app.get("/health", (req, res) =>

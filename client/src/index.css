@@ -23,6 +23,8 @@
   --font-display: 'Cormorant Garamond', Georgia, serif;
   --font-body: 'Inter', system-ui, sans-serif;
   --heading-weight: 700;
+  --page-bg: #F8F6F3;
+  --nav-bg: #FFFFFF;
 }
 
 :root[data-theme="dark"] {
@@ -38,6 +40,8 @@
   --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.6);
   --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.8);
   --heading-weight: 500;
+  --page-bg: #1A1512;
+  --nav-bg: #241D19;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -354,3 +358,135 @@ label {
     grid-template-columns: 1fr;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════
+   DARK MODE — GLOBAL OVERRIDES
+   These rules override hardcoded inline `background: white`
+   and hardcoded dark text colors across all admin/client
+   pages so they automatically adapt to the dark theme.
+   ═══════════════════════════════════════════════════════════ */
+
+:root[data-theme="dark"] {
+
+  /* ── Any element with an inline style background: white ── */
+  /* We target the most common pattern: divs/sections inside
+     #root that carry a white or near-white background.       */
+
+  /* Cards, panels, drawers with background white */
+  #root [style*="background: white"],
+  #root [style*='background:"white"'],
+  #root [style*="background: #fff"],
+  #root [style*="background:#fff"],
+  #root [style*="background: rgb(255, 255, 255)"] {
+    background: var(--warm-white) !important;
+  }
+
+  /* Light grey background variants (table headers, row hover bg, etc.) */
+  #root [style*="background: #F8F6F3"],
+  #root [style*="background: #F3F4F6"],
+  #root [style*="background: #F5F5F5"],
+  #root [style*="background: #F5EFE6"],
+  #root [style*="background: #F9FAFB"],
+  #root [style*="background: #FAFAFA"],
+  #root [style*="background: #f8f8f8"],
+  #root [style*="background: #f5f5f5"],
+  #root [style*="background: #EFF6FF"],
+  #root [style*="background: rgba(255, 255, 255"],
+  #root [style*="background: rgba(248"] {
+    background: var(--cream) !important;
+  }
+
+  /* White table heads */
+  #root thead[style*="background: #F8F6F3"],
+  #root thead[style*="background: #F8F6F3"] th {
+    background: var(--cream) !important;
+    color: var(--charcoal-light) !important;
+  }
+
+  /* ── Text color overrides ── */
+
+  /* Hardcoded charcoal dark on inline styles */
+  #root [style*="color: #2C2420"],
+  #root [style*="color: rgb(44, 36, 32)"],
+  #root [style*="color: #1F2937"],
+  #root [style*="color: #111827"] {
+    color: var(--charcoal) !important;
+  }
+
+  /* Hardcoded medium grays → charcoal-light */
+  #root [style*="color: #4B5563"],
+  #root [style*="color: #374151"],
+  #root [style*="color: #6B7280"],
+  #root [style*="color: #555"],
+  #root [style*="color: #444"],
+  #root [style*="color: #333"] {
+    color: var(--charcoal-light) !important;
+  }
+
+  /* ── Border overrides (hardcoded light borders become themed) ── */
+  #root [style*="border: 1px solid #E5E1D8"],
+  #root [style*="border: 1px solid #E5E7EB"],
+  #root [style*="border: 1px solid #D1D5DB"],
+  #root [style*="border-bottom: 1px solid #E5E1D8"],
+  #root [style*="borderBottom: \"1px solid #E5E1D8\""],
+  #root [style*="border-top: 1px solid #E5E1D8"] {
+    border-color: var(--border) !important;
+  }
+
+  /* ── Input fields ── */
+  #root input:not([style*="background: #"]),
+  #root select:not([style*="background: #"]),
+  #root textarea:not([style*="background: #"]) {
+    background: var(--warm-white) !important;
+    color: var(--charcoal) !important;
+    border-color: var(--border) !important;
+  }
+
+  /* Disabled / read-only inputs */
+  #root input[disabled],
+  #root input[style*="background: #F5F5F5"],
+  #root input[style*="cursor: not-allowed"] {
+    background: var(--cream) !important;
+    color: var(--charcoal-light) !important;
+  }
+
+  /* ── Table rows / cells ── */
+  #root table {
+    color: var(--charcoal) !important;
+  }
+  #root thead {
+    background: var(--cream) !important;
+  }
+  #root thead th {
+    color: var(--charcoal-light) !important;
+    border-color: var(--border) !important;
+  }
+  #root tbody tr {
+    border-color: var(--border) !important;
+  }
+  #root tbody tr:hover {
+    background: rgba(201, 168, 76, 0.04) !important;
+  }
+  #root td {
+    border-color: var(--border) !important;
+  }
+
+  /* ── Modal/overlay backdrops — keep dark ── */
+  /* These should stay as-is (rgba black) so no override needed */
+
+  /* ── Stat badge / status pill backgrounds ── */
+  #root [style*="background: #FEF3C7"] { background: rgba(245,158,11,0.15) !important; }
+  #root [style*="background: #ECFDF5"] { background: rgba(16,185,129,0.12) !important; }
+  #root [style*="background: #EFF6FF"] { background: rgba(59,130,246,0.12) !important; }
+  #root [style*="background: #FEE2E2"] { background: rgba(239,68,68,0.12) !important; }
+  #root [style*="background: #F3F4F6"] { background: var(--cream) !important; }
+  #root [style*="background: #F0FDF4"] { background: rgba(16,185,129,0.1) !important; }
+
+  /* SVG text inside charts */
+  #root svg text[fill="#2C2420"] { fill: var(--charcoal) !important; }
+
+  /* ── Scrollbar track in dark mode ── */
+  ::-webkit-scrollbar-track { background: var(--cream); }
+  ::-webkit-scrollbar-thumb { background: var(--stone); }
+}
+

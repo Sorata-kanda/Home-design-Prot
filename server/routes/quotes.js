@@ -44,6 +44,20 @@ router.post('/', optionalAuth, async (req, res) => {
       projectType: projectType || 'residential'
     });
 
+    // Notify admins about new quote request
+    try {
+        const { createNotification } = require("../utils/notifications");
+        await createNotification({
+            isAdmin: true,
+            title: "New Quote Request",
+            message: `${contactName} requested a quote of ₹${totalEstimate.toLocaleString('en-IN')} for zone(s): ${validItems.map(i => i.zone).join(', ')}`,
+            type: "new_quote",
+            link: "/admin/quotes"
+        });
+    } catch (e) {
+        console.error(e);
+    }
+
     res.status(201).json({ quote, message: 'Quote request submitted. Our team will call you within 24 hours.' });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -94,6 +108,23 @@ router.patch('/:id/status', protect, adminOnly, async (req, res) => {
       { new: true }
     );
     if (!quote) return res.status(404).json({ error: 'Quote not found' });
+
+    // Notify user about quote update
+    if (quote.user) {
+        try {
+            const { createNotification } = require("../utils/notifications");
+            await createNotification({
+                user: quote.user,
+                title: "Quote Request Updated",
+                message: `Your quote request status has been updated to "${status}".`,
+                type: "quote_status",
+                link: "/dashboard"
+            });
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
     res.json({ quote });
   } catch (err) {
     res.status(500).json({ error: err.message });

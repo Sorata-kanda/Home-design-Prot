@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { X, CreditCard, CheckCircle, ShieldCheck } from 'lucide-react';
+import { X, CreditCard, CheckCircle, ShieldCheck, Tag, CheckCheck } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useQueryClient } from '@tanstack/react-query';
-import { ordersAPI } from '../../utils/api';
+import { ordersAPI, couponsAPI } from '../../utils/api';
 import { useAuth } from '../../context/AuthContext';
 import AddressAutocomplete from '../shared/AddressAutocomplete';
 
@@ -28,10 +28,48 @@ export default function CheckoutModal({ selectedProducts = [], renderId, onClose
   const [submitted, setSubmitted] = useState(false);
   const [orderData, setOrderData] = useState(null);
   
-  const totalAmount = selectedProducts.reduce((sum, p) => {
+  // Coupon state
+  const [couponCode, setCouponCode] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState(null);
+  const [couponLoading, setCouponLoading] = useState(false);
+  const [couponError, setCouponError] = useState('');
+  
+  const subtotal = selectedProducts.reduce((sum, p) => {
     const area = form.areas[p.productId] || p.quantity || 100;
     return sum + area * (p.product?.pricePerSqFt || 0);
   }, 0);
+
+  const discountAmount = appliedCoupon
+    ? appliedCoupon.type === 'percent'
+      ? Math.round(subtotal * appliedCoupon.discount / 100)
+      : Math.min(appliedCoupon.discount, subtotal)
+    : 0;
+
+  const totalAmount = subtotal - discountAmount;
+
+  const handleApplyCoupon = async () => {
+    if (!couponCode.trim()) return;
+    setCouponLoading(true);
+    setCouponError('');
+    setAppliedCoupon(null);
+    try {
+      const res = await couponsAPI.validate(couponCode.trim());
+      setAppliedCoupon(res.data.coupon);
+      toast.success(`Coupon "${res.data.coupon.code}" applied!`);
+    } catch (err) {
+      const msg = err.response?.data?.error || 'Invalid coupon code';
+      setCouponError(msg);
+      toast.error(msg);
+    } finally {
+      setCouponLoading(false);
+    }
+  };
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponCode('');
+    setCouponError('');
+  };
 
   const loadRazorpayScript = () => {
     return new Promise((resolve) => {
@@ -206,10 +244,66 @@ export default function CheckoutModal({ selectedProducts = [], renderId, onClose
                   </div>
                 </div>
               ))}
+
+              {/* Subtotal row */}
               <div style={{ display:'flex', justifyContent:'space-between', marginTop:'1rem', alignItems:'center' }}>
-                <span style={{ fontWeight:500, color:'var(--charcoal)' }}>Total Material Cost</span>
+                <span style={{ fontWeight:500, color:'var(--charcoal)' }}>Subtotal</span>
+                <span style={{ fontWeight:600, color:'var(--charcoal)', fontSize:'1rem' }}>₹{subtotal.toLocaleString('en-IN')}</span>
+              </div>
+
+              {/* Coupon code row */}
+              <div style={{ marginTop:'1rem', paddingTop:'1rem', borderTop:'1px dashed rgba(0,0,0,0.1)' }}>
+                <label style={{ display:'flex', alignItems:'center', gap:6, marginBottom:'0.5rem', fontSize:'0.875rem', fontWeight:500, color:'var(--charcoal)' }}>
+                  <Tag size={14} color="var(--gold)" /> Coupon Code
+                </label>
+                {appliedCoupon ? (
+                  <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'0.5rem 0.75rem', background:'rgba(16,185,129,0.08)', border:'1px solid rgba(16,185,129,0.3)', borderRadius:8 }}>
+                    <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+                      <CheckCheck size={16} color="#10b981" />
+                      <span style={{ fontSize:'0.875rem', fontWeight:600, color:'#10b981' }}>{appliedCoupon.code}</span>
+                      <span style={{ fontSize:'0.8rem', color:'var(--charcoal-light)' }}>
+                        — {appliedCoupon.type === 'percent' ? `${appliedCoupon.discount}% off` : `₹${appliedCoupon.discount} off`}
+                      </span>
+                    </div>
+                    <button type="button" onClick={handleRemoveCoupon} style={{ background:'none', border:'none', cursor:'pointer', color:'var(--charcoal-light)', fontSize:'0.75rem', textDecoration:'underline' }}>Remove</button>
+                  </div>
+                ) : (
+                  <div style={{ display:'flex', gap:8 }}>
+                    <input
+                      type="text"
+                      value={couponCode}
+                      onChange={e => { setCouponCode(e.target.value.toUpperCase()); setCouponError(''); }}
+                      onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), handleApplyCoupon())}
+                      placeholder="Enter coupon code"
+                      style={{ flex:1, padding:'0.5rem 0.75rem', fontSize:'0.875rem', borderRadius:8, border: couponError ? '1px solid #ef4444' : '1px solid var(--border)', background:'var(--warm-white)', outline:'none', fontFamily:'var(--font-body)', letterSpacing:'0.05em' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleApplyCoupon}
+                      disabled={couponLoading || !couponCode.trim()}
+                      style={{ padding:'0.5rem 1rem', borderRadius:8, background:'var(--charcoal)', color:'white', border:'none', cursor: couponLoading || !couponCode.trim() ? 'not-allowed' : 'pointer', fontSize:'0.875rem', fontWeight:600, opacity: couponLoading || !couponCode.trim() ? 0.6 : 1, whiteSpace:'nowrap', transition:'all 0.2s' }}
+                    >
+                      {couponLoading ? '...' : 'Apply'}
+                    </button>
+                  </div>
+                )}
+                {couponError && <p style={{ margin:'0.25rem 0 0', fontSize:'0.75rem', color:'#ef4444' }}>{couponError}</p>}
+              </div>
+
+              {/* Discount row */}
+              {appliedCoupon && discountAmount > 0 && (
+                <div style={{ display:'flex', justifyContent:'space-between', marginTop:'0.75rem', alignItems:'center' }}>
+                  <span style={{ fontSize:'0.875rem', color:'#10b981', fontWeight:500 }}>Discount Applied</span>
+                  <span style={{ fontSize:'0.875rem', color:'#10b981', fontWeight:600 }}>− ₹{discountAmount.toLocaleString('en-IN')}</span>
+                </div>
+              )}
+
+              {/* Total */}
+              <div style={{ display:'flex', justifyContent:'space-between', marginTop:'0.75rem', paddingTop:'0.75rem', borderTop:'2px solid var(--border)', alignItems:'center' }}>
+                <span style={{ fontWeight:700, color:'var(--charcoal)', fontSize:'1rem' }}>Total Material Cost</span>
                 <span style={{ fontWeight:700, color:'var(--gold-dark)', fontSize:'1.25rem' }}>₹{totalAmount.toLocaleString('en-IN')}</span>
               </div>
+
               <p style={{ margin:'0.5rem 0 0 0', fontSize:'0.75rem', color:'var(--charcoal-light)', textAlign:'right' }}>
                 * Freight & shipping calculated separately prior to dispatch.
               </p>

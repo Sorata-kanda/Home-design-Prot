@@ -9,26 +9,28 @@ import {
     ShoppingCart,
     Sun,
     Moon,
-    Bell,
 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "../../context/AuthContext";
 import { useTheme } from "../../context/ThemeContext";
+import { useAdmin } from "../../context/AdminContext";
 import { cartAPI } from "../../utils/api";
 import CartDrawer from "./CartDrawer";
+import NotificationBell from "./NotificationBell";
 
 export default function Navbar() {
     const [open, setOpen] = useState(false);
     const [cartOpen, setCartOpen] = useState(false);
     const { user, logout, isAdmin } = useAuth();
     const { theme, toggleTheme } = useTheme();
+    const { sidebarOpen, setSidebarOpen } = useAdmin();
     const navigate = useNavigate();
     const location = useLocation();
     const queryClient = useQueryClient();
     const [showNavbar, setShowNavbar] = useState(true);
     const [lastScrollY, setLastScrollY] = useState(0);
 
-    const isAdminPage = location.pathname === "/admin";
+    const isAdminPage = location.pathname.startsWith("/admin");
 
     useEffect(() => {
         const handleScroll = () => {
@@ -63,16 +65,18 @@ export default function Navbar() {
     // Admin navbar (minimal, right side only)
     if (isAdminPage) {
         return (
+            <>
             <nav
                 style={{
                     position: "fixed",
                     top: 0,
-                    left: "240px",
+                    left: sidebarOpen ? "240px" : "0",
                     right: 0,
                     zIndex: 1000,
-                    background: "white",
-                    borderBottom: "1px solid #E5E1D8",
+                    background: "var(--nav-bg)",
+                    borderBottom: "1px solid var(--border)",
                     height: "64px",
+                    transition: "left 0.3s ease",
                 }}
             >
                 <div
@@ -84,79 +88,108 @@ export default function Navbar() {
                         padding: "0 2rem",
                     }}
                 >
-                    {/* Left side - Visualize Button */}
-                    <Link
-                        to="/visualizer"
+                    {/* Left side - Hamburger Menu and Visualizer Button */}
+                    <div
                         style={{
-                            position: "relative",
                             display: "flex",
                             alignItems: "center",
-                            gap: "0.625rem",
-                            padding: "0.75rem 2rem",
-                            background:
-                                "linear-gradient(135deg, #4A3714 0%, #856323 100%)",
-                            color: "white",
-                            borderRadius: "12px",
-                            textDecoration: "none",
-                            fontSize: "0.9375rem",
-                            fontWeight: "600",
-                            transition: "all 0.3s ease",
-                            boxShadow:
-                                "0 4px 12px rgba(74, 55, 20, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1)",
-                            overflow: "hidden",
-                        }}
-                        onMouseEnter={(e) => {
-                            e.currentTarget.style.transform =
-                                "translateY(-2px)";
-                            e.currentTarget.style.boxShadow =
-                                "0 6px 20px rgba(74, 55, 20, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2)";
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.transform = "translateY(0)";
-                            e.currentTarget.style.boxShadow =
-                                "0 4px 12px rgba(74, 55, 20, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1)";
+                            gap: "1rem",
                         }}
                     >
-                        {/* Stars image on top right */}
-                        <img
-                            src="/images/stars.png"
-                            alt=""
+                        {/* Hamburger Menu Toggle */}
+                        <button
+                            onClick={() => setSidebarOpen(!sidebarOpen)}
                             style={{
-                                position: "absolute",
-                                top: "6px",
-                                right: "10px",
-                                width: "25px",
-                                height: "20px",
-                                opacity: 0.7,
+                                background: "none",
+                                border: "none",
+                                cursor: "pointer",
+                                padding: "0.5rem",
+                                display: "flex",
+                                alignItems: "center",
+                                color: "var(--charcoal)",
                             }}
-                        />
+                            title={
+                                sidebarOpen ? "Hide sidebar" : "Show sidebar"
+                            }
+                        >
+                            <Menu size={24} />
+                        </button>
 
-                        <svg
-                            width="20"
-                            height="20"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="#CEA955"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
+                        {/* Visualizer Button */}
+                        <Link
+                            to="/visualizer"
                             style={{
-                                filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.2))",
+                                position: "relative",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "0.625rem",
+                                padding: "0.75rem 2rem",
+                                background:
+                                    "linear-gradient(135deg, #4A3714 0%, #856323 100%)",
+                                color: "white",
+                                borderRadius: "12px",
+                                textDecoration: "none",
+                                fontSize: "0.9375rem",
+                                fontWeight: "600",
+                                transition: "all 0.3s ease",
+                                boxShadow:
+                                    "0 4px 12px rgba(74, 55, 20, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1)",
+                                overflow: "hidden",
+                            }}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.transform =
+                                    "translateY(-2px)";
+                                e.currentTarget.style.boxShadow =
+                                    "0 6px 20px rgba(74, 55, 20, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2)";
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.transform =
+                                    "translateY(0)";
+                                e.currentTarget.style.boxShadow =
+                                    "0 4px 12px rgba(74, 55, 20, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1)";
                             }}
                         >
-                            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
-                            <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
-                            <line x1="12" y1="22.08" x2="12" y2="12" />
-                        </svg>
-                        <span
-                            style={{
-                                textShadow: "0 1px 2px rgba(0,0,0,0.2)",
-                                letterSpacing: "0.02em",
-                            }}
-                        >
-                            Visualizer
-                        </span>
-                    </Link>
+                            {/* Stars image on top right */}
+                            <img
+                                src="/images/stars.png"
+                                alt=""
+                                style={{
+                                    position: "absolute",
+                                    top: "6px",
+                                    right: "10px",
+                                    width: "25px",
+                                    height: "20px",
+                                    opacity: 0.7,
+                                }}
+                            />
+
+                            <svg
+                                width="20"
+                                height="20"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="#CEA955"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                style={{
+                                    filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.2))",
+                                }}
+                            >
+                                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+                                <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+                                <line x1="12" y1="22.08" x2="12" y2="12" />
+                            </svg>
+                            <span
+                                style={{
+                                    textShadow: "0 1px 2px rgba(0,0,0,0.2)",
+                                    letterSpacing: "0.02em",
+                                }}
+                            >
+                                Visualizer
+                            </span>
+                        </Link>
+                    </div>
 
                     {/* Right side - Icons */}
                     <div
@@ -176,9 +209,13 @@ export default function Navbar() {
                                 padding: "0.5rem",
                                 display: "flex",
                                 alignItems: "center",
-                                color: "#2C2420",
+                                color: "var(--charcoal)",
+                                borderRadius: 8,
+                                transition: "background 0.2s",
                             }}
-                            title="Toggle theme"
+                            title={theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
+                            onMouseEnter={e => e.currentTarget.style.background = "var(--border)"}
+                            onMouseLeave={e => e.currentTarget.style.background = "none"}
                         >
                             {theme === "dark" ? (
                                 <Sun size={20} />
@@ -188,38 +225,7 @@ export default function Navbar() {
                         </button>
 
                         {/* Notifications */}
-                        <div style={{ position: "relative" }}>
-                            <button
-                                style={{
-                                    background: "none",
-                                    border: "none",
-                                    cursor: "pointer",
-                                    padding: "0.5rem",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    color: "#2C2420",
-                                }}
-                            >
-                                <Bell size={20} />
-                            </button>
-                            <span
-                                style={{
-                                    position: "absolute",
-                                    top: "-5px",
-                                    right: "-3px",
-                                    background: "#ef4444",
-                                    color: "white",
-                                    fontSize: "0.625rem",
-                                    padding: "2px 6px",
-                                    borderRadius: "10px",
-                                    fontWeight: "600",
-                                    minWidth: "18px",
-                                    textAlign: "center",
-                                }}
-                            >
-                                2
-                            </span>
-                        </div>
+                        <NotificationBell />
 
                         {/* Cart */}
                         {user && (
@@ -233,8 +239,13 @@ export default function Navbar() {
                                         padding: "0.5rem",
                                         display: "flex",
                                         alignItems: "center",
-                                        color: "#2C2420",
+                                        color: "var(--charcoal)",
+                                        borderRadius: 8,
+                                        transition: "background 0.2s",
                                     }}
+                                    title="View Cart"
+                                    onMouseEnter={e => e.currentTarget.style.background = "var(--border)"}
+                                    onMouseLeave={e => e.currentTarget.style.background = "none"}
                                 >
                                     <ShoppingCart size={20} />
                                 </button>
@@ -252,6 +263,7 @@ export default function Navbar() {
                                             fontWeight: "600",
                                             minWidth: "18px",
                                             textAlign: "center",
+                                            pointerEvents: "none",
                                         }}
                                     >
                                         {cartItemCount}
@@ -268,9 +280,10 @@ export default function Navbar() {
                                     alignItems: "center",
                                     gap: "0.75rem",
                                     padding: "0.5rem 1rem",
-                                    background: "#F8F6F3",
+                                    background: "var(--warm-white)",
+                                    border: "1px solid var(--border)",
                                     borderRadius: "24px",
-                                    cursor: "pointer",
+                                    cursor: "default",
                                 }}
                             >
                                 <div
@@ -287,17 +300,17 @@ export default function Navbar() {
                                         fontWeight: "600",
                                     }}
                                 >
-                                    {user.name?.charAt(0) || "R"}
+                                    {user.name?.charAt(0) || "A"}
                                 </div>
                                 <div>
                                     <div
                                         style={{
                                             fontSize: "0.875rem",
                                             fontWeight: "600",
-                                            color: "#2C2420",
+                                            color: "var(--charcoal)",
                                         }}
                                     >
-                                        {user.name?.split(" ")[0] || "Rahul"}
+                                        {user.name?.split(" ")[0]}
                                     </div>
                                     <div
                                         style={{
@@ -311,21 +324,6 @@ export default function Navbar() {
                             </div>
                         )}
 
-                        {/* Settings */}
-                        <button
-                            style={{
-                                background: "none",
-                                border: "none",
-                                cursor: "pointer",
-                                padding: "0.5rem",
-                                display: "flex",
-                                alignItems: "center",
-                                color: "#2C2420",
-                            }}
-                        >
-                            <Settings size={20} />
-                        </button>
-
                         {/* Logout */}
                         {user && (
                             <button
@@ -337,9 +335,13 @@ export default function Navbar() {
                                     padding: "0.5rem",
                                     display: "flex",
                                     alignItems: "center",
-                                    color: "#2C2420",
+                                    color: "var(--charcoal)",
+                                    borderRadius: 8,
+                                    transition: "background 0.2s",
                                 }}
                                 title="Sign out"
+                                onMouseEnter={e => e.currentTarget.style.background = "var(--border)"}
+                                onMouseLeave={e => e.currentTarget.style.background = "none"}
                             >
                                 <LogOut size={20} />
                             </button>
@@ -347,6 +349,10 @@ export default function Navbar() {
                     </div>
                 </div>
             </nav>
+
+            {/* Cart Drawer - available on admin pages too */}
+            <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} />
+            </>
         );
     }
 
@@ -538,26 +544,36 @@ export default function Navbar() {
                                     gap: "0.75rem",
                                 }}
                             >
-                                <Link
-                                    to="/dashboard"
-                                    className="btn btn-ghost btn-sm"
-                                    style={{
-                                        display: "flex",
-                                        alignItems: "center",
-                                        gap: 6,
-                                    }}
-                                >
-                                    <User size={15} />
-                                    <span className="hidden-mobile">
-                                        {user.name.split(" ")[0]}
-                                    </span>
-                                </Link>
-                                {isAdmin && (
+                                {isAdmin ? (
+                                    /* Admin: go straight to Admin Panel */
                                     <Link
                                         to="/admin"
                                         className="btn btn-secondary btn-sm"
+                                        style={{
+                                            display: "flex",
+                                            alignItems: "center",
+                                            gap: 6,
+                                        }}
+                                        title="Admin Panel"
                                     >
                                         <Settings size={14} />
+                                        <span className="hidden-mobile">Admin Panel</span>
+                                    </Link>
+                                ) : (
+                                    /* Regular user: go to client dashboard */
+                                    <Link
+                                        to="/dashboard"
+                                        className="btn btn-ghost btn-sm"
+                                        style={{
+                                            display: "flex",
+                                            alignItems: "center",
+                                            gap: 6,
+                                        }}
+                                    >
+                                        <User size={15} />
+                                        <span className="hidden-mobile">
+                                            {user.name.split(" ")[0]}
+                                        </span>
                                     </Link>
                                 )}
                                 <button
@@ -614,7 +630,7 @@ export default function Navbar() {
                             { path: "/", label: "Home" },
                             { path: "/visualizer", label: "AI Visualizer" },
                             { path: "/products", label: "Products" },
-                            ...(user
+                            ...(user && !isAdmin
                                 ? [{ path: "/dashboard", label: "My Renders" }]
                                 : []),
                             ...(isAdmin

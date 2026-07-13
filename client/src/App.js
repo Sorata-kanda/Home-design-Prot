@@ -9,6 +9,7 @@ import { Toaster } from "react-hot-toast";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { ThemeProvider } from "./context/ThemeContext";
+import { AdminProvider } from "./context/AdminContext";
 import Navbar from "./components/shared/Navbar";
 import HomePage from "./pages/HomePage";
 import VisualizerPage from "./pages/VisualizerPage";
@@ -17,7 +18,17 @@ import DashboardPage from "./pages/DashboardPage";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import SharedRenderPage from "./pages/SharedRenderPage";
-import AdminPage from "./pages/NewAdminPage";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminProducts from "./pages/admin/AdminProducts";
+import AdminOrders from "./pages/admin/AdminOrders";
+import AdminQuotes from "./pages/admin/AdminQuotes";
+import AdminClients from "./pages/admin/AdminClients";
+import AdminRenders from "./pages/admin/AdminRenders";
+import AdminCategories from "./pages/admin/AdminCategories";
+import AdminReviews from "./pages/admin/AdminReviews";
+import AdminUsers from "./pages/admin/AdminUsers";
+import AdminCoupons from "./pages/admin/AdminCoupons";
+import AdminSettings from "./pages/admin/AdminSettings";
 
 const queryClient = new QueryClient({
     defaultOptions: { queries: { staleTime: 5 * 60 * 1000, retry: 1 } },
@@ -46,18 +57,21 @@ function ProtectedRoute({ children, adminOnly = false }) {
 function AppRoutes() {
     const location = useLocation();
     const isHome = location.pathname === "/";
+    const isAdminRoute = location.pathname.startsWith("/admin");
+    const isDashboardRoute = location.pathname.startsWith("/dashboard");
 
     return (
         <>
-            <Navbar />
+            {!isAdminRoute && !isDashboardRoute && <Navbar />}
             <div
                 style={{
-                    paddingTop: isHome ? "0" : "64px",
+                    paddingTop: isHome || isAdminRoute || isDashboardRoute ? "0" : "64px",
                     display: "flex",
                     flexDirection: "column",
                     minHeight: "100vh",
                 }}
             >
+                {" "}
                 <Routes>
                     <Route path="/" element={<HomePage />} />
                     <Route
@@ -92,7 +106,87 @@ function AppRoutes() {
                         path="/admin"
                         element={
                             <ProtectedRoute adminOnly>
-                                <AdminPage />
+                                <AdminDashboard />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/admin/products"
+                        element={
+                            <ProtectedRoute adminOnly>
+                                <AdminProducts />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/admin/orders"
+                        element={
+                            <ProtectedRoute adminOnly>
+                                <AdminOrders />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/admin/quotes"
+                        element={
+                            <ProtectedRoute adminOnly>
+                                <AdminQuotes />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/admin/clients"
+                        element={
+                            <ProtectedRoute adminOnly>
+                                <AdminClients />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/admin/renders"
+                        element={
+                            <ProtectedRoute adminOnly>
+                                <AdminRenders />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/admin/categories"
+                        element={
+                            <ProtectedRoute adminOnly>
+                                <AdminCategories />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/admin/reviews"
+                        element={
+                            <ProtectedRoute adminOnly>
+                                <AdminReviews />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/admin/users"
+                        element={
+                            <ProtectedRoute adminOnly>
+                                <AdminUsers />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/admin/coupons"
+                        element={
+                            <ProtectedRoute adminOnly>
+                                <AdminCoupons />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/admin/settings"
+                        element={
+                            <ProtectedRoute adminOnly>
+                                <AdminSettings />
                             </ProtectedRoute>
                         }
                     />
@@ -107,19 +201,21 @@ export default function App() {
         <QueryClientProvider client={queryClient}>
             <ThemeProvider>
                 <AuthProvider>
-                    <BrowserRouter>
-                        <AppRoutes />
-                        <Toaster
-                            position="top-center"
-                            toastOptions={{
-                                style: {
-                                    fontFamily: "Inter, sans-serif",
-                                    fontSize: "0.875rem",
-                                    borderRadius: "8px",
-                                },
-                            }}
-                        />
-                    </BrowserRouter>
+                    <AdminProvider>
+                        <BrowserRouter>
+                            <AppRoutes />
+                            <Toaster
+                                position="top-center"
+                                toastOptions={{
+                                    style: {
+                                        fontFamily: "Inter, sans-serif",
+                                        fontSize: "0.875rem",
+                                        borderRadius: "8px",
+                                    },
+                                }}
+                            />
+                        </BrowserRouter>
+                    </AdminProvider>
                 </AuthProvider>
             </ThemeProvider>
         </QueryClientProvider>

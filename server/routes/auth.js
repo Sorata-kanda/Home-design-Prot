@@ -59,6 +59,20 @@ router.post("/facebook", async (req, res) => {
                     role: isAdminEmail ? "admin" : "client",
                     isVerified: true, // Facebook accounts are pre-verified
                 });
+
+                // Notify admins about new user registration
+                try {
+                    const { createNotification } = require("../utils/notifications");
+                    await createNotification({
+                        isAdmin: true,
+                        title: "New User Registered",
+                        message: `${user.name} (${user.email}) registered an account via Facebook.`,
+                        type: "new_user",
+                        link: "/admin/users"
+                    });
+                } catch (e) {
+                    console.error(e);
+                }
             }
         }
 
@@ -130,6 +144,20 @@ router.post("/google", async (req, res) => {
                     role: isAdminEmail ? "admin" : "client",
                     isVerified: true, // Google accounts are pre-verified
                 });
+
+                // Notify admins about new user registration
+                try {
+                    const { createNotification } = require("../utils/notifications");
+                    await createNotification({
+                        isAdmin: true,
+                        title: "New User Registered",
+                        message: `${user.name} (${user.email}) registered an account via Google.`,
+                        type: "new_user",
+                        link: "/admin/users"
+                    });
+                } catch (e) {
+                    console.error(e);
+                }
             }
         }
 
@@ -316,6 +344,20 @@ router.post("/verify-otp", async (req, res) => {
         user.otpCode = undefined;
         user.otpExpires = undefined;
         await user.save();
+
+        // Notify admins about new user registration
+        try {
+            const { createNotification } = require("../utils/notifications");
+            await createNotification({
+                isAdmin: true,
+                title: "New User Registered",
+                message: `${user.name} (${user.email}) registered an account.`,
+                type: "new_user",
+                link: "/admin/users"
+            });
+        } catch (notifErr) {
+            console.error("Failed to create new user notification:", notifErr);
+        }
 
         const token = signToken(user._id);
         res.json({ token, user, message: "Email verified successfully!" });
