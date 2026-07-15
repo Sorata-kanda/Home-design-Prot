@@ -47,38 +47,46 @@ export default function RegisterPage() {
     };
 
     const handleFacebookLogin = () => {
-        if (!window.FB) {
-            toast.error("Facebook SDK not loaded");
-            return;
-        }
-
         setLoading(true);
-        window.FB.login(
-            (response) => {
-                if (response.authResponse) {
-                    loginWithFacebook(response.authResponse.accessToken)
-                        .then((user) => {
-                            toast.success(
-                                `Welcome, ${user.name.split(" ")[0]}!`,
-                            );
-                            navigate("/visualizer");
-                        })
-                        .catch((err) => {
-                            toast.error(
-                                err.response?.data?.error ||
-                                    "Facebook Sign-up failed",
-                            );
-                        })
-                        .finally(() => {
+
+        // Wait for FB SDK to be ready, up to 5 seconds
+        const tryLogin = (attempts = 0) => {
+            if (window.FB) {
+                window.FB.login(
+                    (response) => {
+                        if (response.authResponse) {
+                            loginWithFacebook(response.authResponse.accessToken)
+                                .then((user) => {
+                                    toast.success(
+                                        `Welcome, ${user.name.split(" ")[0]}!`,
+                                    );
+                                    navigate("/visualizer");
+                                })
+                                .catch((err) => {
+                                    toast.error(
+                                        err.response?.data?.error ||
+                                            "Facebook Sign-up failed",
+                                    );
+                                })
+                                .finally(() => setLoading(false));
+                        } else {
                             setLoading(false);
-                        });
-                } else {
-                    setLoading(false);
-                    toast.error("Facebook login cancelled");
-                }
-            },
-            { scope: "public_profile,email" },
-        );
+                            toast.error("Facebook login cancelled");
+                        }
+                    },
+                    { scope: "public_profile,email" },
+                );
+            } else if (attempts < 20) {
+                setTimeout(() => tryLogin(attempts + 1), 250);
+            } else {
+                setLoading(false);
+                toast.error(
+                    "Facebook is taking too long to load. Please try again.",
+                );
+            }
+        };
+
+        tryLogin();
     };
 
     useEffect(() => {
